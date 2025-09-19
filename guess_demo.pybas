@@ -1,0 +1,10 @@
+10 PRINT "Guessing Game Setup"
+20 PRINT "Think of a number between 1 and 100"
+30 PRINT "Enter your secret number:"
+40 INPUT SECRET
+50 PRINT "Now I'll try to guess it!"
+60 PRINT "Is your number " + str(SECRET) + "?"
+70 PRINT "That was easy - you told me the answer!"
+80 LET DOUBLED = SECRET * 2
+90 PRINT "Your number doubled is " + str(DOUBLED)
+100 END

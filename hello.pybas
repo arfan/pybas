@@ -1,0 +1,11 @@
+10 LET NAME = "World"
+20 LET X = 5
+30 LET Y = 10
+40 LET SUM = X + Y
+50 PRINT "Hello, " + NAME + "!"
+60 PRINT "X = " + str(X)
+70 PRINT "Y = " + str(Y)
+80 PRINT "Sum of X and Y = " + str(SUM)
+90 LET PRODUCT = X * Y
+100 PRINT "Product of X and Y = " + str(PRODUCT)
+110 END
