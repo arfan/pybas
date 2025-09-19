@@ -9,9 +9,11 @@ A lightweight BASIC language interpreter written in Python that allows you to wr
 - ✅ **String Operations** - String concatenation and manipulation
 - ✅ **Output** - Display results with PRINT statements
 - ✅ **Input** - Interactive user input with INPUT statements
+- ✅ **Loop Control** - FOR loops with STEP support for iteration
 - ✅ **Comments** - Document your code with single quote comments
 - ✅ **Automatic Type Conversion** - Seamless handling of numbers and strings
 - ✅ **Line-by-Line Execution** - Traditional BASIC line number programming
+- ✅ **Nested Loops** - Support for loops within loops
 
 ## Installation
 
@@ -137,6 +139,44 @@ INPUT "prompt", variable
 - Optional prompt message
 - Converts numeric input to integers or floats automatically
 - String input remains as text
+
+#### FOR - Loop Control
+
+Creates loops that repeat a block of code a specified number of times.
+
+**Syntax:**
+```basic
+FOR variable = start TO end
+  [statements]
+NEXT variable
+
+FOR variable = start TO end STEP increment
+  [statements]
+NEXT variable
+```
+
+**Examples:**
+```basic
+10 FOR I = 1 TO 5
+20   PRINT "Number: " + str(I)
+30 NEXT I
+
+40 FOR J = 10 TO 1 STEP -1
+50   PRINT "Countdown: " + str(J)
+60 NEXT J
+
+70 FOR K = 2 TO 20 STEP 2
+80   PRINT "Even number: " + str(K)
+90 NEXT K
+```
+
+**Features:**
+- Loop variable is automatically incremented
+- Default STEP is 1 if not specified
+- Supports negative STEP for counting backwards
+- Can use variables and expressions for start, end, and step values
+- Nested loops are supported
+- NEXT can specify variable name for clarity (optional)
 
 #### END - Program Termination
 
@@ -276,6 +316,54 @@ Program finished.
 100 END
 ```
 
+### Example 5: Star Pyramid with Loops
+
+**File: pyramid.pybas**
+```basic
+10 PRINT "Star Pyramid Generator"
+20 INPUT "Enter pyramid height: ", HEIGHT
+30 FOR ROW = 1 TO HEIGHT
+40   LET SPACES = HEIGHT - ROW
+50   LET STARS = 2 * ROW - 1
+60   LET SPACE_STR = ""
+70   FOR S = 1 TO SPACES
+80     LET SPACE_STR = SPACE_STR + " "
+90   NEXT S
+100   LET STAR_STR = ""
+110   FOR T = 1 TO STARS
+120     LET STAR_STR = STAR_STR + "*"
+130   NEXT T
+140   PRINT SPACE_STR + STAR_STR
+150 NEXT ROW
+160 END
+```
+
+**Sample Output (height = 4):**
+```
+Star Pyramid Generator
+Enter pyramid height: 4
+   *
+  ***
+ *****
+*******
+Program finished.
+```
+
+### Example 6: Loop with STEP
+
+**File: step_demo.pybas**
+```basic
+10 PRINT "Counting by 2s from 1 to 10:"
+20 FOR I = 1 TO 10 STEP 2
+30   PRINT str(I)
+40 NEXT I
+50 PRINT "Counting backwards from 5 to 1:"
+60 FOR J = 5 TO 1 STEP -1
+70   PRINT str(J)
+80 NEXT J
+90 END
+```
+
 ### Step-by-Step Tutorial: Creating Your First Program
 
 1. **Create a new file** with `.pybas` extension:
@@ -318,12 +406,17 @@ The repository includes several example programs to help you get started:
 | `input_demo.pybas` | Personal information program with INPUT |
 | `guess_demo.pybas` | Simple guessing game setup |
 | `math.pybas` | Mathematical operations demonstration |
+| `pyramid.pybas` | Interactive star pyramid generator with loops |
+| `simple_pyramid.pybas` | Simple star pyramid using nested loops |
+| `loop_test.pybas` | Basic FOR loop demonstration |
+| `step_test.pybas` | FOR loops with STEP functionality |
 
 **Run any example:**
 ```bash
 ./pybas hello.pybas
 ./pybas calculator.pybas
-./pybas input_demo.pybas
+./pybas pyramid.pybas
+./pybas step_test.pybas
 ```
 
 ## Advanced Usage
@@ -452,7 +545,7 @@ chmod +x pybas  # Make the file executable
 
 **Current Limitations:**
 - No conditional statements (IF/THEN/ELSE)
-- No loops (FOR/WHILE)
+- No WHILE loops (only FOR loops supported)
 - No subroutines (GOSUB/RETURN)
 - No arrays or complex data structures
 - No file I/O operations
@@ -502,6 +595,7 @@ This project is open source. Feel free to use, modify, and distribute.
 
 - **v1.0**: Initial release with basic LET, PRINT, INPUT, and END statements
 - **v1.1**: Added INPUT functionality with prompts and automatic type conversion
+- **v1.2**: Added FOR loop support with NEXT statements and STEP functionality
 
 ---
 

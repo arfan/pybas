@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-# basic_interpreter.py
 import sys
 
 class BasicInterpreter:
@@ -9,6 +8,7 @@ class BasicInterpreter:
         self.vars = {}
         self.pc = None
         self.stack = []
+        self.for_stack = []  # Stack for FOR loops
 
         # Load program into a dict {line_number: statement}
         for line in program_lines:
@@ -23,12 +23,15 @@ class BasicInterpreter:
     def run(self):
         while self.pc in self.program:
             stmt = self.program[self.pc]
-            self.execute(stmt)
+            next_pc = self.execute(stmt)
             if stmt.startswith("END"):
                 break
 
-            # Move to next line if not changed by GOTO/GOSUB
-            if self.pc in self.program:
+            # Use the returned PC or move to next line
+            if next_pc is not None:
+                self.pc = next_pc
+            else:
+                # Move to next line if not changed by GOTO/GOSUB
                 next_lines = sorted([n for n in self.program if n > self.pc])
                 self.pc = next_lines[0] if next_lines else None
 
@@ -65,11 +68,71 @@ class BasicInterpreter:
                 except ValueError:
                     self.vars[var] = user_input
 
+        elif stmt.startswith("FOR"):
+            # Example: FOR I = 1 TO 10
+            # Example: FOR I = 1 TO 10 STEP 2
+            _, expr = stmt.split(" ", 1)
+            parts = expr.split()
+            var = parts[0]
+            start_val = eval(parts[2], {}, self.vars)
+            to_idx = parts.index("TO")
+            end_val = eval(parts[to_idx + 1], {}, self.vars)
+            
+            # Check for STEP
+            step_val = 1
+            if "STEP" in parts:
+                step_idx = parts.index("STEP")
+                step_val = eval(parts[step_idx + 1], {}, self.vars)
+            
+            # Initialize loop variable
+            self.vars[var] = start_val
+            
+            # Push loop info onto stack
+            self.for_stack.append({
+                'var': var,
+                'end': end_val,
+                'step': step_val,
+                'line': self.pc
+            })
+
+        elif stmt.startswith("NEXT"):
+            # Example: NEXT I or just NEXT
+            if not self.for_stack:
+                print("NEXT without FOR")
+                return None
+                
+            loop_info = self.for_stack[-1]
+            var = loop_info['var']
+            
+            # Check if variable specified and matches
+            if len(stmt.split()) > 1:
+                specified_var = stmt.split()[1]
+                if specified_var != var:
+                    print(f"NEXT {specified_var} doesn't match FOR {var}")
+                    return None
+            
+            # Increment loop variable
+            self.vars[var] += loop_info['step']
+            
+            # Check if loop should continue
+            if ((loop_info['step'] > 0 and self.vars[var] <= loop_info['end']) or
+                (loop_info['step'] < 0 and self.vars[var] >= loop_info['end'])):
+                # Continue loop - jump back to line after FOR
+                for_line = loop_info['line']
+                next_lines = sorted([n for n in self.program if n > for_line])
+                if next_lines:
+                    return next_lines[0]
+            else:
+                # Exit loop
+                self.for_stack.pop()
+
         elif stmt.startswith("END"):
             print("Program finished.")
 
         else:
             print(f"Unknown statement: {stmt}")
+            
+        return None
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
