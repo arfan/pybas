@@ -1,5 +1,7 @@
 # PyBAS - Python BASIC Interpreter
 
+![PyBAS](pybas.jpg)
+
 A lightweight BASIC language interpreter written in Python that allows you to write and execute classic BASIC programs with modern convenience.
 
 ## Features
