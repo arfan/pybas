@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run PyBAS Program",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/pybas",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "PyBAS REPL",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/pybasrepl",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "Print Statement": {
+    "prefix": "print",
+    "body": [
+      "PRINT \"$1\""
+    ],
+    "description": "Print a string or expression"
+  },
+  "Let Assignment": {
+    "prefix": "let",
+    "body": [
+      "LET $1 = $2"
+    ],
+    "description": "Assign a value to a variable"
+  },
+  "Input Statement": {
+    "prefix": "input",
+    "body": [
+      "INPUT \"$1: \", $2"
+    ],
+    "description": "Get input from user with prompt"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "FOR $1 = $2 TO $3",
+      "  $4",
+      "NEXT $1"
+    ],
+    "description": "Create a FOR loop"
+  },
+  "For Loop with Step": {
+    "prefix": "forstep",
+    "body": [
+      "FOR $1 = $2 TO $3 STEP $4",
+      "  $5",
+      "NEXT $1"
+    ],
+    "description": "Create a FOR loop with custom step"
+  },
+  "If Statement": {
+    "prefix": "if",
+    "body": [
+      "IF $1 GOTO $2"
+    ],
+    "description": "Conditional GOTO statement"
+  },
+  "Basic Program Template": {
+    "prefix": "program",
+    "body": [
+      "10 REM $1",
+      "20 PRINT \"Hello, World!\"",
+      "30 END"
+    ],
+    "description": "Basic program template"
+  },
+  "Comment": {
+    "prefix": "rem",
+    "body": [
+      "REM $1"
+    ],
+    "description": "Add a comment"
+  },
+  "Goto Statement": {
+    "prefix": "goto",
+    "body": [
+      "GOTO $1"
+    ],
+    "description": "Unconditional jump to line number"
+  },
+  "Line with number": {
+    "prefix": "line",
+    "body": [
+      "$1 $2"
+    ],
+    "description": "Create a numbered line"
+  }
+}

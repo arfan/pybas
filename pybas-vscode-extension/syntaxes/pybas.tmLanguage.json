@@ -1,0 +1,117 @@
+{
+  "name": "PyBAS",
+  "scopeName": "source.pybas",
+  "fileTypes": ["pybas", "bas"],
+  "patterns": [
+    {
+      "include": "#line-number"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#functions"
+    }
+  ],
+  "repository": {
+    "line-number": {
+      "match": "^\\s*(\\d+)\\s+",
+      "captures": {
+        "1": {
+          "name": "constant.numeric.line-number.pybas"
+        }
+      }
+    },
+    "comments": {
+      "patterns": [
+        {
+          "match": "\\b(REM)\\b.*$",
+          "name": "comment.line.rem.pybas",
+          "captures": {
+            "1": {
+              "name": "keyword.other.rem.pybas"
+            }
+          }
+        },
+        {
+          "match": "'.*$",
+          "name": "comment.line.apostrophe.pybas"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(?i)(LET|PRINT|INPUT|FOR|NEXT|GOTO|IF|THEN|END|TO|STEP)\\b",
+          "name": "keyword.control.pybas"
+        },
+        {
+          "match": "\\b(?i)(AND|OR|NOT)\\b",
+          "name": "keyword.operator.logical.pybas"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.pybas",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.pybas"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b\\d+\\.\\d+\\b",
+          "name": "constant.numeric.float.pybas"
+        },
+        {
+          "match": "\\b\\d+\\b",
+          "name": "constant.numeric.integer.pybas"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": "(=|<>|<=|>=|<|>)",
+          "name": "keyword.operator.comparison.pybas"
+        },
+        {
+          "match": "(\\+|\\-|\\*|\\/|\\^|\\*\\*)",
+          "name": "keyword.operator.arithmetic.pybas"
+        }
+      ]
+    },
+    "variables": {
+      "match": "\\b[A-Za-z][A-Za-z0-9_]*\\b",
+      "name": "variable.other.pybas"
+    },
+    "functions": {
+      "match": "\\b(?i)(str|int|float|abs|sqr|sin|cos|tan)\\b",
+      "name": "support.function.builtin.pybas"
+    }
+  }
+}

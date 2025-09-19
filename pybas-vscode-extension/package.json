@@ -1,0 +1,66 @@
+{
+  "name": "pybas-language",
+  "displayName": "PyBAS Language Support",
+  "description": "Language support for PyBAS (Python BASIC) files with syntax highlighting, snippets, and integrated development tools",
+  "version": "1.0.0",
+  "publisher": "your-publisher-name",
+  "author": {
+    "name": "Abdul Arfan",
+    "email": "your.email@example.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/yourusername/pybas",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/pybas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/pybas/issues"
+  },
+  "keywords": [
+    "basic",
+    "pybas",
+    "programming",
+    "language",
+    "syntax",
+    "highlighting",
+    "vintage",
+    "retro",
+    "interpreter"
+  ],
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "pybas",
+        "aliases": ["PyBAS", "pybas", "BASIC"],
+        "extensions": [".pybas", ".bas"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pybas",
+        "scopeName": "source.pybas",
+        "path": "./syntaxes/pybas.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "pybas",
+        "path": "./snippets/pybas.json"
+      }
+    ]
+  }
+}

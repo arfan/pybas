@@ -1,0 +1,13 @@
+10 REM PyBAS VS Code Extension Test
+20 PRINT "Testing syntax highlighting"
+30 LET X = 42
+40 LET NAME = "PyBAS"
+50 FOR I = 1 TO 5
+60   PRINT "Count: " + str(I)
+70 NEXT I
+80 IF X = 42 GOTO 100
+90 PRINT "This should be skipped"
+100 PRINT "Hello from " + NAME + "!"
+110 INPUT "Enter your name: ", USERNAME
+120 PRINT "Nice to meet you, " + USERNAME
+130 END

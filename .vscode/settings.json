@@ -1,0 +1,20 @@
+{
+  "files.associations": {
+    "*.pybas": "pybas",
+    "*.bas": "pybas"
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "[pybas]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.wordWrap": "off",
+    "editor.lineNumbers": "on",
+    "editor.rulers": [80],
+    "editor.fontFamily": "Monaco, 'Courier New', monospace",
+    "editor.fontSize": 14,
+    "editor.showLineEndings": false,
+    "editor.renderWhitespace": "boundary"
+  }
+}
