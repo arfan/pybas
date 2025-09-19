@@ -281,6 +281,131 @@ class BasicInterpreter:
             
         return None
 
+class PyBASFormatter:
+    """Embedded formatter for REPL use"""
+    def __init__(self, indent_size: int = 2, line_increment: int = 10):
+        self.indent_size = indent_size
+        self.line_increment = line_increment
+        self.nest_level = 0
+        self.for_stack = []
+    
+    def format_statement(self, statement: str) -> str:
+        """Format a single statement with proper spacing"""
+        if not statement:
+            return statement
+            
+        stmt_upper = statement.upper()
+        if stmt_upper.startswith("LET"):
+            return self.format_let_statement(statement)
+        elif stmt_upper.startswith("PRINT"):
+            return self.format_print_statement(statement)
+        elif stmt_upper.startswith("INPUT"):
+            return self.format_input_statement(statement)
+        elif stmt_upper.startswith("FOR"):
+            return self.format_for_statement(statement)
+        elif stmt_upper.startswith("NEXT"):
+            return self.format_next_statement(statement)
+        elif stmt_upper.startswith("IF"):
+            return self.format_if_statement(statement)
+        elif stmt_upper.startswith("GOTO"):
+            return self.format_goto_statement(statement)
+        elif stmt_upper.startswith("REM"):
+            return statement
+        elif stmt_upper.startswith("END"):
+            return "END"
+        else:
+            return statement
+    
+    def format_let_statement(self, statement: str) -> str:
+        expr = statement[3:].strip()
+        if "=" in expr:
+            var, val = expr.split("=", 1)
+            return f"LET {var.strip()} = {val.strip()}"
+        return statement
+    
+    def format_print_statement(self, statement: str) -> str:
+        expr = statement[5:].strip()
+        return f"PRINT {expr}"
+    
+    def format_input_statement(self, statement: str) -> str:
+        expr = statement[5:].strip()
+        if "," in expr:
+            prompt, var = expr.split(",", 1)
+            return f"INPUT {prompt.strip()}, {var.strip()}"
+        else:
+            return f"INPUT {expr}"
+    
+    def format_for_statement(self, statement: str) -> str:
+        expr = statement[3:].strip()
+        expr = re.sub(r'\s*=\s*', ' = ', expr)
+        expr = re.sub(r'\s*TO\s*', ' TO ', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'\s*STEP\s*', ' STEP ', expr, flags=re.IGNORECASE)
+        return f"FOR {expr}"
+    
+    def format_next_statement(self, statement: str) -> str:
+        parts = statement.split()
+        if len(parts) > 1:
+            return f"NEXT {parts[1]}"
+        else:
+            return "NEXT"
+    
+    def format_if_statement(self, statement: str) -> str:
+        expr = statement[2:].strip()
+        # Add proper spacing around operators
+        expr = re.sub(r'\s*=\s*', ' = ', expr)
+        expr = re.sub(r'\s*<>\s*', ' <> ', expr)
+        expr = re.sub(r'\s*<=\s*', ' <= ', expr)
+        expr = re.sub(r'\s*>=\s*', ' >= ', expr)
+        expr = re.sub(r'\s*<\s*', ' < ', expr)
+        expr = re.sub(r'\s*>\s*', ' > ', expr)
+        expr = re.sub(r'\s*GOTO\s*', ' GOTO ', expr, flags=re.IGNORECASE)
+        return f"IF {expr}"
+    
+    def format_goto_statement(self, statement: str) -> str:
+        expr = statement[4:].strip()
+        return f"GOTO {expr}"
+    
+    def calculate_indentation(self, statement: str) -> int:
+        stmt_upper = statement.upper()
+        if stmt_upper.startswith("FOR"):
+            current_indent = self.nest_level
+            self.nest_level += 1
+            self.for_stack.append(self.nest_level - 1)
+            return current_indent
+        elif stmt_upper.startswith("NEXT"):
+            if self.for_stack:
+                self.nest_level -= 1
+                return self.for_stack.pop()
+            return max(0, self.nest_level - 1)
+        else:
+            return self.nest_level
+    
+    def format_program(self, program_dict: Dict[int, str]) -> Dict[int, str]:
+        """Format program dictionary and return new program dict"""
+        formatted_program = {}
+        statements = [(line_num, stmt) for line_num, stmt in program_dict.items()]
+        statements.sort()
+        
+        # Reset indentation state
+        self.nest_level = 0
+        self.for_stack = []
+        
+        new_line_num = self.line_increment
+        
+        for original_line_num, statement in statements:
+            # Calculate indentation
+            indent_level = self.calculate_indentation(statement)
+            indent = " " * (indent_level * self.indent_size)
+            
+            # Format the statement
+            formatted_statement = self.format_statement(statement)
+            
+            # Store in new program dict with indentation
+            formatted_program[new_line_num] = f"{indent}{formatted_statement}"
+            new_line_num += self.line_increment
+        
+        return formatted_program
+
 class PyBASREPL:
     def __init__(self):
         self.program_lines: Dict[int, str] = {}
@@ -312,7 +437,7 @@ class PyBASREPL:
             return "program_line", line_num, statement
         else:
             # In AUTO mode, treat non-command input as program line
-            if self.auto_mode and not user_input.upper().startswith(('LIST', 'RUN', 'NEW', 'SAVE', 'LOAD', 'DIR', 'HELP', 'EXIT', 'QUIT', 'AUTO', 'RENUM')):
+            if self.auto_mode and not user_input.upper().startswith(('LIST', 'RUN', 'NEW', 'SAVE', 'LOAD', 'DIR', 'HELP', 'EXIT', 'QUIT', 'AUTO', 'RENUM', 'FORMAT')):
                 return "auto_line", self.auto_current, user_input
             
             # Direct command
@@ -524,6 +649,49 @@ class PyBASREPL:
         self.program_lines = new_program
         print(f"Program renumbered starting from {start}, increment {increment}")
     
+    def cmd_format(self, args: List[str]):
+        """FORMAT command - format the current program"""
+        if not self.program_lines:
+            print("No program to format")
+            return
+        
+        indent_size = 2
+        line_increment = 10
+        
+        # Parse arguments for custom formatting options
+        if args:
+            try:
+                if len(args) >= 1:
+                    indent_size = int(args[0])
+                if len(args) >= 2:
+                    line_increment = int(args[1])
+                    
+                if indent_size < 0 or indent_size > 8:
+                    print("Error: Indent size must be between 0 and 8")
+                    return
+                if line_increment < 1 or line_increment > 100:
+                    print("Error: Line increment must be between 1 and 100")
+                    return
+                    
+            except ValueError:
+                print("Error: Invalid arguments. Usage: FORMAT [indent_size] [line_increment]")
+                print("Example: FORMAT 4 5")
+                return
+        
+        try:
+            # Create formatter and format the current program
+            formatter = PyBASFormatter(indent_size, line_increment)
+            formatted_program = formatter.format_program(self.program_lines)
+            
+            # Replace the current program with formatted version
+            self.program_lines = formatted_program
+            
+            print(f"Program formatted with {indent_size}-space indentation and {line_increment} line increment")
+            print("Use LIST to see the formatted program")
+            
+        except Exception as e:
+            print(f"Error formatting program: {e}")
+    
     def handle_auto_line(self, line_num: int, statement: str):
         """Handle a line entry in AUTO mode"""
         if statement:
@@ -546,6 +714,7 @@ class PyBASREPL:
         print("  LIST [start]-[end]    - Show range of lines")
         print("  AUTO [start] [incr]   - Automatic line numbering")
         print("  RENUM [start] [incr]  - Renumber program lines")
+        print("  FORMAT [indent] [inc] - Format program with indentation")
         print()
         print("Program Management:")
         print("  RUN                   - Execute current program")
@@ -566,6 +735,9 @@ class PyBASREPL:
         print("  PRINT \"Hello\"         - (in AUTO mode)")
         print("  FOR I = 1 TO 5        - (in AUTO mode)")
         print("  RENUM 10 10           - Renumber from 10, increment 10")
+        print("  FORMAT                - Format with defaults (2 spaces, increment 10)")
+        print("  FORMAT 4              - Format with 4-space indentation")
+        print("  FORMAT 4 5            - Format with 4 spaces, increment 5")
         print("  LIST                  - Show program")
         print("  RUN                   - Execute program")
         print("  SAVE hello            - Save as hello.pybas")
@@ -591,6 +763,7 @@ class PyBASREPL:
             'DIR': self.cmd_dir,
             'AUTO': self.cmd_auto,
             'RENUM': self.cmd_renum,
+            'FORMAT': self.cmd_format,
             'HELP': self.cmd_help,
             'EXIT': self.cmd_exit,
             'QUIT': self.cmd_exit,
