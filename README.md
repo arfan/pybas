@@ -35,12 +35,21 @@ No installation required! PyBAS is a single Python script that runs with Python 
    ```bash
    chmod +x pybas
    ```
-3. Create a `.pybas` program file
-4. Run your program:
+3. Try the essential examples:
    ```bash
-   ./pybas yourprogram.pybas
-   # or
-   python3 pybas yourprogram.pybas
+   ./pybas hello.pybas        # Hello World
+   ./pybas loop.pybas         # FOR loop example  
+   ./pybas interactive.pybas  # INPUT and conditionals
+   ```
+4. Explore more examples in the `examples/` folder:
+   ```bash
+   ./pybas examples/calculator.pybas
+   ./pybas examples/guess_demo.pybas
+   # See examples/README.md for complete list
+   ```
+5. Use the interactive REPL:
+   ```bash
+   ./pybasrepl
    ```
 
 ## Usage
@@ -257,18 +266,63 @@ PyBAS automatically handles different data types:
 
 **File: hello.pybas**
 ```basic
-10 LET NAME = "World"
-20 PRINT "Hello, " + NAME + "!"
-30 END
+10 REM Hello World - Your First PyBAS Program
+20 PRINT "Hello, World!"
+30 PRINT "Welcome to PyBAS - a GW-BASIC compatible interpreter!"
+40 END
 ```
 
 **Output:**
 ```
 Hello, World!
+Welcome to PyBAS - a GW-BASIC compatible interpreter!
 Program finished.
 ```
 
-### Example 2: Simple Calculator
+### Example 2: Loops and Variables
+
+**File: loop.pybas**
+```basic
+10 REM Loop Example - Demonstrates FOR loops and variables
+20 PRINT "Counting from 1 to 5:"
+30 FOR I = 1 TO 5
+40   PRINT "Number " + str(I)
+50 NEXT I
+60 PRINT "Done counting!"
+70 END
+```
+
+### Example 3: Interactive Program
+
+**File: interactive.pybas**
+```basic
+10 REM Interactive Example - Shows INPUT and conditional logic
+20 PRINT "What's your name?"
+30 INPUT NAME
+40 PRINT "Hello, " + NAME + "!"
+50 PRINT "How old are you?"
+60 INPUT AGE
+70 IF AGE >= 18 GOTO 100
+80 PRINT "You are young!"
+90 GOTO 110
+100 PRINT "You are an adult!"
+110 PRINT "Nice to meet you, " + NAME + "!"
+120 END
+```
+
+### More Examples
+
+Over 30 additional examples are available in the `examples/` folder, including:
+
+- **Games**: Number guessing games, interactive programs
+- **Mathematics**: Calculators, multiplication tables, pyramids  
+- **Loops**: Various FOR loop demonstrations with STEP
+- **Error Testing**: Comprehensive error handling examples
+- **Code Formatting**: Before/after formatting examples
+
+See `examples/README.md` for a complete catalog with descriptions.
+
+### Example 4: Calculator (from examples/)
 
 **File: calculator.pybas**
 ```basic
