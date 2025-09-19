@@ -14,6 +14,7 @@ A lightweight BASIC language interpreter written in Python that allows you to wr
 - ✅ **Automatic Type Conversion** - Seamless handling of numbers and strings
 - ✅ **Line-by-Line Execution** - Traditional BASIC line number programming
 - ✅ **Nested Loops** - Support for loops within loops
+- ✅ **Code Formatter** - Built-in pybasfmt tool for automatic code formatting and indentation
 
 ## Installation
 
@@ -410,6 +411,7 @@ The repository includes several example programs to help you get started:
 | `simple_pyramid.pybas` | Simple star pyramid using nested loops |
 | `loop_test.pybas` | Basic FOR loop demonstration |
 | `step_test.pybas` | FOR loops with STEP functionality |
+| `messy_clean.pybas` | Example of formatted code (before/after pybasfmt) |
 
 **Run any example:**
 ```bash
@@ -417,9 +419,92 @@ The repository includes several example programs to help you get started:
 ./pybas calculator.pybas
 ./pybas pyramid.pybas
 ./pybas step_test.pybas
+
+# Format any program
+./pybasfmt program.pybas
 ```
 
 ## Advanced Usage
+
+### Code Formatting with pybasfmt
+
+PyBAS includes a code formatter called `pybasfmt` that automatically formats and indents your PyBAS programs for better readability and consistency.
+
+#### Features
+
+- **Line Number Normalization**: Renumbers lines in consistent increments (default: 10, 20, 30...)
+- **Automatic Indentation**: Properly indents FOR loops and nested structures
+- **Statement Formatting**: Adds consistent spacing around operators and keywords
+- **Preserves Functionality**: Maintains the exact behavior of your program
+
+#### Usage
+
+**Format a file in-place:**
+```bash
+./pybasfmt program.pybas
+```
+
+**Format to a new file:**
+```bash
+./pybasfmt program.pybas -o formatted_program.pybas
+```
+
+**Preview formatting without changing files:**
+```bash
+./pybasfmt program.pybas --dry-run
+```
+
+**Custom indentation:**
+```bash
+./pybasfmt program.pybas --indent 4  # Use 4 spaces instead of default 2
+```
+
+**Custom line numbering:**
+```bash
+./pybasfmt program.pybas --line-increment 5  # Use 5, 10, 15... instead of 10, 20, 30...
+```
+
+**Format multiple files:**
+```bash
+./pybasfmt *.pybas
+```
+
+#### Example: Before and After
+
+**Before formatting:**
+```basic
+5 PRINT"Messy code"
+15  LET X=5
+35   FOR I=1TO 5
+45 PRINT"Number: "+str(I)
+50FOR J = 1 TO I
+60PRINT"*"
+70NEXT J
+90 NEXT  I
+100END
+```
+
+**After formatting:**
+```basic
+10 PRINT "Messy code"
+20 LET X = 5
+30 FOR I = 1 TO 5
+40   PRINT "Number: "+str(I)
+50   FOR J = 1 TO I
+60     PRINT "*"
+70   NEXT J
+80 NEXT I
+90 END
+```
+
+#### Command Line Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output FILE` | Output to specific file | Format in-place |
+| `-i, --indent N` | Indentation spaces | 2 |
+| `-l, --line-increment N` | Line number increment | 10 |
+| `--dry-run` | Preview without writing | Write files |
 
 ### Running Programs
 
@@ -596,6 +681,7 @@ This project is open source. Feel free to use, modify, and distribute.
 - **v1.0**: Initial release with basic LET, PRINT, INPUT, and END statements
 - **v1.1**: Added INPUT functionality with prompts and automatic type conversion
 - **v1.2**: Added FOR loop support with NEXT statements and STEP functionality
+- **v1.3**: Added pybasfmt code formatter with automatic indentation and formatting
 
 ---
 
