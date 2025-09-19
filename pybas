@@ -20,6 +20,36 @@ class BasicInterpreter:
 
         self.pc = min(self.program.keys())
 
+    def safe_eval(self, expression, line_num=None):
+        """Safely evaluate a Python expression with user-friendly error messages."""
+        try:
+            return eval(expression, {}, self.vars)
+        except ZeroDivisionError:
+            error_msg = f"Error on line {line_num}: Division by zero"
+            print(error_msg)
+            sys.exit(1)
+        except NameError as e:
+            var_name = str(e).split("'")[1] if "'" in str(e) else "unknown"
+            error_msg = f"Error on line {line_num}: Variable '{var_name}' is not defined"
+            print(error_msg)
+            sys.exit(1)
+        except SyntaxError:
+            error_msg = f"Error on line {line_num}: Invalid expression syntax"
+            print(error_msg)
+            sys.exit(1)
+        except ValueError as e:
+            error_msg = f"Error on line {line_num}: Invalid value - {str(e)}"
+            print(error_msg)
+            sys.exit(1)
+        except TypeError as e:
+            error_msg = f"Error on line {line_num}: Type error - {str(e)}"
+            print(error_msg)
+            sys.exit(1)
+        except Exception as e:
+            error_msg = f"Error on line {line_num}: {str(e)}"
+            print(error_msg)
+            sys.exit(1)
+
     def run(self):
         while self.pc in self.program:
             stmt = self.program[self.pc]
@@ -43,11 +73,11 @@ class BasicInterpreter:
             # Example: LET A = 5
             _, expr = stmt.split(" ", 1)
             var, val = expr.split("=")
-            self.vars[var.strip()] = eval(val.strip(), {}, self.vars)
+            self.vars[var.strip()] = self.safe_eval(val.strip(), self.pc)
 
         elif stmt_upper.startswith("PRINT"):
             _, expr = stmt.split(" ", 1)
-            print(eval(expr.strip(), {}, self.vars))
+            print(self.safe_eval(expr.strip(), self.pc))
 
         elif stmt_upper.startswith("INPUT"):
             # Example: INPUT "Enter your name: ", NAME
@@ -77,16 +107,16 @@ class BasicInterpreter:
             _, expr = stmt.split(" ", 1)
             parts = expr.split()
             var = parts[0]
-            start_val = eval(parts[2], {}, self.vars)
+            start_val = self.safe_eval(parts[2], self.pc)
             to_idx = next(i for i, part in enumerate(parts) if part.upper() == "TO")
-            end_val = eval(parts[to_idx + 1], {}, self.vars)
+            end_val = self.safe_eval(parts[to_idx + 1], self.pc)
             
             # Check for STEP
             step_val = 1
             step_indices = [i for i, part in enumerate(parts) if part.upper() == "STEP"]
             if step_indices:
                 step_idx = step_indices[0]
-                step_val = eval(parts[step_idx + 1], {}, self.vars)
+                step_val = self.safe_eval(parts[step_idx + 1], self.pc)
             
             # Initialize loop variable
             self.vars[var] = start_val
@@ -133,6 +163,10 @@ class BasicInterpreter:
 
         elif stmt_upper.startswith("END"):
             print("Program finished.")
+
+        elif stmt_upper.startswith("REM"):
+            # Comment - do nothing
+            pass
 
         else:
             print(f"Unknown statement: {stmt}")
