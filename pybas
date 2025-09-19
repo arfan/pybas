@@ -50,6 +50,64 @@ class BasicInterpreter:
             print(error_msg)
             sys.exit(1)
 
+    def handle_if_statement(self, stmt, stmt_upper):
+        """Handle IF...GOTO statements with comparison operators"""
+        try:
+            # Parse IF condition GOTO target
+            # Examples: IF X = 5 GOTO 100, IF A < B GOTO 50
+            if "GOTO" not in stmt_upper:
+                print(f"Error on line {self.pc}: IF statement missing GOTO")
+                sys.exit(1)
+            
+            # Split on GOTO
+            if_part, goto_part = stmt_upper.split("GOTO", 1)
+            target_line = int(goto_part.strip())
+            
+            # Extract condition from IF part
+            condition = if_part[2:].strip()  # Remove "IF"
+            
+            # Parse comparison operators
+            operators = ["<=", ">=", "<>", "=", "<", ">"]
+            condition_result = False
+            
+            for op in operators:
+                if op in condition:
+                    left, right = condition.split(op, 1)
+                    left_val = self.safe_eval(left.strip(), self.pc)
+                    right_val = self.safe_eval(right.strip(), self.pc)
+                    
+                    if op == "=":
+                        condition_result = left_val == right_val
+                    elif op == "<>":
+                        condition_result = left_val != right_val
+                    elif op == "<":
+                        condition_result = left_val < right_val
+                    elif op == ">":
+                        condition_result = left_val > right_val
+                    elif op == "<=":
+                        condition_result = left_val <= right_val
+                    elif op == ">=":
+                        condition_result = left_val >= right_val
+                    break
+            else:
+                print(f"Error on line {self.pc}: Invalid IF condition syntax")
+                sys.exit(1)
+            
+            # If condition is true, GOTO target line
+            if condition_result:
+                if target_line in self.program:
+                    return target_line
+                else:
+                    print(f"Error on line {self.pc}: GOTO target line {target_line} does not exist")
+                    sys.exit(1)
+            
+            # If condition is false, continue to next line
+            return None
+            
+        except (ValueError, IndexError) as e:
+            print(f"Error on line {self.pc}: Invalid IF...GOTO syntax")
+            sys.exit(1)
+
     def run(self):
         while self.pc in self.program:
             stmt = self.program[self.pc]
@@ -69,7 +127,25 @@ class BasicInterpreter:
         # Convert statement to uppercase for case-insensitive keyword matching
         stmt_upper = stmt.upper()
         
-        if stmt_upper.startswith("LET"):
+        if stmt_upper.startswith("GOTO"):
+            # Example: GOTO 100
+            try:
+                target_line = int(stmt_upper.split()[1])
+                if target_line in self.program:
+                    return target_line
+                else:
+                    print(f"Error on line {self.pc}: GOTO target line {target_line} does not exist")
+                    sys.exit(1)
+            except (IndexError, ValueError):
+                print(f"Error on line {self.pc}: Invalid GOTO syntax")
+                sys.exit(1)
+        
+        elif stmt_upper.startswith("IF"):
+            # Example: IF X = 5 GOTO 100
+            # Example: IF X < 10 GOTO 200
+            return self.handle_if_statement(stmt, stmt_upper)
+        
+        elif stmt_upper.startswith("LET"):
             # Example: LET A = 5
             _, expr = stmt.split(" ", 1)
             var, val = expr.split("=")
