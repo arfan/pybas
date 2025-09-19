@@ -1,0 +1,534 @@
+#!/usr/bin/env python3
+"""
+PyBAS REPL (pybasrepl)
+A GW-BASIC style interactive environment for PyBAS programming
+
+Features:
+- Line-by-line program entry
+- LIST, RUN, NEW, SAVE, LOAD commands
+- Direct statement execution
+- Program editing and management
+- Classic BASIC REPL experience
+"""
+
+import sys
+import os
+import re
+from typing import Dict, List, Optional
+from pathlib import Path
+
+# Import the BasicInterpreter from the main pybas file
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+class BasicInterpreter:
+    """Embedded BasicInterpreter class for REPL use"""
+    def __init__(self, program_lines):
+        self.program = {}
+        self.vars = {}
+        self.pc = None
+        self.stack = []
+        self.for_stack = []  # Stack for FOR loops
+
+        # Load program into a dict {line_number: statement}
+        for line in program_lines:
+            line = line.strip()
+            if not line or line.startswith("'"):  # allow comments
+                continue
+            num, stmt = line.split(" ", 1)
+            self.program[int(num)] = stmt.strip()
+
+        self.pc = min(self.program.keys())
+
+    def run(self):
+        while self.pc in self.program:
+            stmt = self.program[self.pc]
+            next_pc = self.execute(stmt)
+            if stmt.upper().startswith("END"):
+                break
+
+            # Use the returned PC or move to next line
+            if next_pc is not None:
+                self.pc = next_pc
+            else:
+                # Move to next line if not changed by GOTO/GOSUB
+                next_lines = sorted([n for n in self.program if n > self.pc])
+                self.pc = next_lines[0] if next_lines else None
+
+    def execute(self, stmt):
+        # Convert statement to uppercase for case-insensitive keyword matching
+        stmt_upper = stmt.upper()
+        
+        if stmt_upper.startswith("LET"):
+            # Example: LET A = 5
+            _, expr = stmt.split(" ", 1)
+            var, val = expr.split("=")
+            self.vars[var.strip()] = eval(val.strip(), {}, self.vars)
+
+        elif stmt_upper.startswith("PRINT"):
+            _, expr = stmt.split(" ", 1)
+            print(eval(expr.strip(), {}, self.vars))
+
+        elif stmt_upper.startswith("INPUT"):
+            # Example: INPUT "Enter your name: ", NAME
+            _, expr = stmt.split(" ", 1)
+            if "," in expr:
+                prompt, var = expr.split(",", 1)
+                prompt = prompt.strip().strip('"')
+                var = var.strip()
+                user_input = input(prompt)
+                # Try to convert to number if possible, otherwise keep as string
+                try:
+                    self.vars[var] = float(user_input) if '.' in user_input else int(user_input)
+                except ValueError:
+                    self.vars[var] = user_input
+            else:
+                # Simple INPUT without prompt
+                var = expr.strip()
+                user_input = input()
+                try:
+                    self.vars[var] = float(user_input) if '.' in user_input else int(user_input)
+                except ValueError:
+                    self.vars[var] = user_input
+
+        elif stmt_upper.startswith("FOR"):
+            # Example: FOR I = 1 TO 10
+            # Example: FOR I = 1 TO 10 STEP 2
+            _, expr = stmt.split(" ", 1)
+            parts = expr.split()
+            var = parts[0]
+            start_val = eval(parts[2], {}, self.vars)
+            to_idx = next(i for i, part in enumerate(parts) if part.upper() == "TO")
+            end_val = eval(parts[to_idx + 1], {}, self.vars)
+            
+            # Check for STEP
+            step_val = 1
+            step_indices = [i for i, part in enumerate(parts) if part.upper() == "STEP"]
+            if step_indices:
+                step_idx = step_indices[0]
+                step_val = eval(parts[step_idx + 1], {}, self.vars)
+            
+            # Initialize loop variable
+            self.vars[var] = start_val
+            
+            # Push loop info onto stack
+            self.for_stack.append({
+                'var': var,
+                'end': end_val,
+                'step': step_val,
+                'line': self.pc
+            })
+
+        elif stmt_upper.startswith("NEXT"):
+            # Example: NEXT I or just NEXT
+            # Example: NEXT I or just NEXT
+            if not self.for_stack:
+                print("NEXT without FOR")
+                return None
+                
+            loop_info = self.for_stack[-1]
+            var = loop_info['var']
+            
+            # Check if variable specified and matches
+            if len(stmt.split()) > 1:
+                specified_var = stmt.split()[1]
+                if specified_var != var:
+                    print(f"NEXT {specified_var} doesn't match FOR {var}")
+                    return None
+            
+            # Increment loop variable
+            self.vars[var] += loop_info['step']
+            
+            # Check if loop should continue
+            if ((loop_info['step'] > 0 and self.vars[var] <= loop_info['end']) or
+                (loop_info['step'] < 0 and self.vars[var] >= loop_info['end'])):
+                # Continue loop - jump back to line after FOR
+                for_line = loop_info['line']
+                next_lines = sorted([n for n in self.program if n > for_line])
+                if next_lines:
+                    return next_lines[0]
+            else:
+                # Exit loop
+                self.for_stack.pop()
+
+        elif stmt_upper.startswith("END"):
+            print("Program finished.")
+
+        else:
+            print(f"Unknown statement: {stmt}")
+            
+        return None
+
+class PyBASREPL:
+    def __init__(self):
+        self.program_lines: Dict[int, str] = {}
+        self.current_filename: Optional[str] = None
+        self.running = True
+        self.auto_mode = False
+        self.auto_start = 10
+        self.auto_increment = 10
+        self.auto_current = 10
+        
+    def print_banner(self):
+        """Print the startup banner"""
+        print("PyBAS REPL v1.0")
+        print("GW-BASIC style interactive environment")
+        print("Type HELP for available commands")
+        print()
+    
+    def parse_input(self, user_input: str) -> tuple:
+        """Parse user input and determine if it's a line number + statement or command"""
+        user_input = user_input.strip()
+        if not user_input:
+            return "empty", None, None
+            
+        # Check if input starts with a number (program line)
+        match = re.match(r'^(\d+)\s*(.*)', user_input)
+        if match:
+            line_num = int(match.group(1))
+            statement = match.group(2).strip()
+            return "program_line", line_num, statement
+        else:
+            # In AUTO mode, treat non-command input as program line
+            if self.auto_mode and not user_input.upper().startswith(('LIST', 'RUN', 'NEW', 'SAVE', 'LOAD', 'DIR', 'HELP', 'EXIT', 'QUIT', 'AUTO', 'RENUM')):
+                return "auto_line", self.auto_current, user_input
+            
+            # Direct command
+            parts = user_input.split()
+            command = parts[0].upper()
+            args = parts[1:] if len(parts) > 1 else []
+            return "command", command, args
+    
+    def handle_program_line(self, line_num: int, statement: str):
+        """Handle a program line entry"""
+        if statement:
+            # Add or replace line
+            self.program_lines[line_num] = statement
+            print(f"Line {line_num} entered")
+        else:
+            # Delete line if no statement
+            if line_num in self.program_lines:
+                del self.program_lines[line_num]
+                print(f"Line {line_num} deleted")
+            else:
+                print(f"Line {line_num} not found")
+    
+    def cmd_list(self, args: List[str]):
+        """LIST command - show program lines"""
+        if not self.program_lines:
+            print("No program in memory")
+            return
+            
+        # Parse range if provided
+        start_line = None
+        end_line = None
+        
+        if len(args) == 1:
+            if '-' in args[0]:
+                # Range like "10-50"
+                parts = args[0].split('-')
+                start_line = int(parts[0]) if parts[0] else None
+                end_line = int(parts[1]) if parts[1] else None
+            else:
+                # Single line
+                start_line = end_line = int(args[0])
+        elif len(args) == 2:
+            start_line = int(args[0])
+            end_line = int(args[1])
+        
+        # Get sorted line numbers
+        sorted_lines = sorted(self.program_lines.keys())
+        
+        # Filter by range if specified
+        if start_line is not None:
+            sorted_lines = [n for n in sorted_lines if n >= start_line]
+        if end_line is not None:
+            sorted_lines = [n for n in sorted_lines if n <= end_line]
+        
+        # Display lines
+        for line_num in sorted_lines:
+            print(f"{line_num} {self.program_lines[line_num]}")
+    
+    def cmd_run(self, args: List[str]):
+        """RUN command - execute the current program"""
+        if not self.program_lines:
+            print("No program to run")
+            return
+        
+        try:
+            # Convert program to lines format expected by BasicInterpreter
+            program_text = []
+            for line_num in sorted(self.program_lines.keys()):
+                program_text.append(f"{line_num} {self.program_lines[line_num]}")
+            
+            # Create and run interpreter
+            interpreter = BasicInterpreter(program_text)
+            
+            print("Running program...")
+            print("-" * 40)
+            interpreter.run()
+            print("-" * 40)
+            
+        except Exception as e:
+            print(f"Runtime error: {e}")
+    
+    def cmd_new(self, args: List[str]):
+        """NEW command - clear current program"""
+        self.program_lines.clear()
+        self.current_filename = None
+        print("Program cleared")
+    
+    def cmd_save(self, args: List[str]):
+        """SAVE command - save current program to file"""
+        if not args:
+            if self.current_filename:
+                filename = self.current_filename
+            else:
+                print("No filename specified")
+                return
+        else:
+            filename = args[0]
+            if not filename.endswith('.pybas'):
+                filename += '.pybas'
+        
+        if not self.program_lines:
+            print("No program to save")
+            return
+        
+        try:
+            with open(filename, 'w') as f:
+                for line_num in sorted(self.program_lines.keys()):
+                    f.write(f"{line_num} {self.program_lines[line_num]}\n")
+            
+            self.current_filename = filename
+            print(f"Program saved as {filename}")
+            
+        except Exception as e:
+            print(f"Error saving file: {e}")
+    
+    def cmd_load(self, args: List[str]):
+        """LOAD command - load program from file"""
+        if not args:
+            print("Filename required")
+            return
+        
+        filename = args[0]
+        if not filename.endswith('.pybas'):
+            filename += '.pybas'
+        
+        try:
+            if not os.path.exists(filename):
+                print(f"File {filename} not found")
+                return
+            
+            self.program_lines.clear()
+            
+            with open(filename, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("'"):
+                        match = re.match(r'^(\d+)\s+(.*)', line)
+                        if match:
+                            line_num = int(match.group(1))
+                            statement = match.group(2)
+                            self.program_lines[line_num] = statement
+            
+            self.current_filename = filename
+            print(f"Program loaded from {filename}")
+            
+        except Exception as e:
+            print(f"Error loading file: {e}")
+    
+    def cmd_dir(self, args: List[str]):
+        """DIR command - list .pybas files in current directory"""
+        try:
+            pybas_files = [f for f in os.listdir('.') if f.endswith('.pybas')]
+            if pybas_files:
+                print("PyBAS files in current directory:")
+                for filename in sorted(pybas_files):
+                    size = os.path.getsize(filename)
+                    print(f"  {filename:<20} {size:>8} bytes")
+            else:
+                print("No .pybas files found")
+        except Exception as e:
+            print(f"Error listing directory: {e}")
+    
+    def cmd_auto(self, args: List[str]):
+        """AUTO command - automatic line numbering"""
+        if len(args) == 0:
+            # Toggle AUTO mode
+            self.auto_mode = not self.auto_mode
+            if self.auto_mode:
+                print(f"AUTO mode ON - starting at {self.auto_current}, increment {self.auto_increment}")
+            else:
+                print("AUTO mode OFF")
+        elif len(args) == 1:
+            # Set starting line number
+            self.auto_start = int(args[0])
+            self.auto_current = self.auto_start
+            self.auto_mode = True
+            print(f"AUTO mode ON - starting at {self.auto_current}, increment {self.auto_increment}")
+        elif len(args) == 2:
+            # Set start and increment
+            self.auto_start = int(args[0])
+            self.auto_increment = int(args[1])
+            self.auto_current = self.auto_start
+            self.auto_mode = True
+            print(f"AUTO mode ON - starting at {self.auto_current}, increment {self.auto_increment}")
+    
+    def cmd_renum(self, args: List[str]):
+        """RENUM command - renumber program lines"""
+        if not self.program_lines:
+            print("No program to renumber")
+            return
+        
+        start = 10
+        increment = 10
+        
+        if len(args) >= 1:
+            start = int(args[0])
+        if len(args) >= 2:
+            increment = int(args[1])
+        
+        # Get sorted lines and renumber
+        sorted_lines = sorted(self.program_lines.keys())
+        new_program = {}
+        new_line_num = start
+        
+        for old_line_num in sorted_lines:
+            new_program[new_line_num] = self.program_lines[old_line_num]
+            new_line_num += increment
+        
+        self.program_lines = new_program
+        print(f"Program renumbered starting from {start}, increment {increment}")
+    
+    def handle_auto_line(self, line_num: int, statement: str):
+        """Handle a line entry in AUTO mode"""
+        if statement:
+            self.program_lines[line_num] = statement
+            self.auto_current += self.auto_increment
+        else:
+            # Empty line exits AUTO mode
+            self.auto_mode = False
+            print("AUTO mode OFF")
+    
+    def cmd_help(self, args: List[str]):
+        """HELP command - show available commands"""
+        print("PyBAS REPL Commands:")
+        print()
+        print("Program Editing:")
+        print("  [number] [statement]  - Enter or modify program line")
+        print("  [number]              - Delete program line")
+        print("  LIST                  - Show entire program")
+        print("  LIST [line]           - Show specific line")
+        print("  LIST [start]-[end]    - Show range of lines")
+        print("  AUTO [start] [incr]   - Automatic line numbering")
+        print("  RENUM [start] [incr]  - Renumber program lines")
+        print()
+        print("Program Management:")
+        print("  RUN                   - Execute current program")
+        print("  NEW                   - Clear current program")
+        print("  SAVE [filename]       - Save program to file")
+        print("  LOAD [filename]       - Load program from file")
+        print()
+        print("File Operations:")
+        print("  DIR                   - List .pybas files")
+        print()
+        print("System:")
+        print("  HELP                  - Show this help")
+        print("  EXIT or QUIT          - Exit REPL")
+        print()
+        print("Examples:")
+        print("  10 PRINT \"Hello\"       - Enter line 10")
+        print("  AUTO 100 5            - Auto number starting 100, increment 5")
+        print("  PRINT \"Hello\"         - (in AUTO mode)")
+        print("  FOR I = 1 TO 5        - (in AUTO mode)")
+        print("  RENUM 10 10           - Renumber from 10, increment 10")
+        print("  LIST                  - Show program")
+        print("  RUN                   - Execute program")
+        print("  SAVE hello            - Save as hello.pybas")
+    
+    def cmd_exit(self, args: List[str]):
+        """EXIT command - quit the REPL"""
+        if self.program_lines and self.current_filename is None:
+            response = input("Program not saved. Exit anyway? (y/n): ").strip().lower()
+            if response not in ['y', 'yes']:
+                return
+        
+        print("Goodbye!")
+        self.running = False
+    
+    def execute_command(self, command: str, args: List[str]):
+        """Execute a REPL command"""
+        commands = {
+            'LIST': self.cmd_list,
+            'RUN': self.cmd_run,
+            'NEW': self.cmd_new,
+            'SAVE': self.cmd_save,
+            'LOAD': self.cmd_load,
+            'DIR': self.cmd_dir,
+            'AUTO': self.cmd_auto,
+            'RENUM': self.cmd_renum,
+            'HELP': self.cmd_help,
+            'EXIT': self.cmd_exit,
+            'QUIT': self.cmd_exit,
+        }
+        
+        if command in commands:
+            commands[command](args)
+        else:
+            print(f"Unknown command: {command}")
+            print("Type HELP for available commands")
+    
+    def run(self):
+        """Main REPL loop"""
+        self.print_banner()
+        
+        while self.running:
+            try:
+                # Show prompt
+                if self.auto_mode:
+                    prompt = f"{self.auto_current} "
+                elif self.current_filename:
+                    prompt = f"[{self.current_filename}] > "
+                else:
+                    prompt = "> "
+                
+                user_input = input(prompt).strip()
+                
+                if not user_input:
+                    if self.auto_mode:
+                        # Empty line in AUTO mode exits AUTO
+                        self.auto_mode = False
+                        print("AUTO mode OFF")
+                    continue
+                
+                input_type, data1, data2 = self.parse_input(user_input)
+                
+                if input_type == "program_line":
+                    self.handle_program_line(data1, data2)
+                elif input_type == "auto_line":
+                    self.handle_auto_line(data1, data2)
+                elif input_type == "command":
+                    self.execute_command(data1, data2)
+                
+            except KeyboardInterrupt:
+                print("\nUse EXIT or QUIT to leave the REPL")
+            except EOFError:
+                print("\nGoodbye!")
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+
+def main():
+    """Main entry point"""
+    if len(sys.argv) > 1:
+        print("PyBAS REPL - Interactive mode")
+        print("Usage: pybasrepl")
+        print("No command line arguments needed")
+        sys.exit(1)
+    
+    repl = PyBASREPL()
+    repl.run()
+
+if __name__ == "__main__":
+    main()

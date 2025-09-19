@@ -40,18 +40,19 @@ class PyBASFormatter:
         if not statement:
             return statement
             
-        # Handle different statement types
-        if statement.startswith("LET"):
+        # Handle different statement types (case-insensitive)
+        stmt_upper = statement.upper()
+        if stmt_upper.startswith("LET"):
             return self.format_let_statement(statement)
-        elif statement.startswith("PRINT"):
+        elif stmt_upper.startswith("PRINT"):
             return self.format_print_statement(statement)
-        elif statement.startswith("INPUT"):
+        elif stmt_upper.startswith("INPUT"):
             return self.format_input_statement(statement)
-        elif statement.startswith("FOR"):
+        elif stmt_upper.startswith("FOR"):
             return self.format_for_statement(statement)
-        elif statement.startswith("NEXT"):
+        elif stmt_upper.startswith("NEXT"):
             return self.format_next_statement(statement)
-        elif statement.startswith("END"):
+        elif stmt_upper.startswith("END"):
             return "END"
         else:
             return statement
@@ -86,21 +87,30 @@ class PyBASFormatter:
         """Format FOR statements"""
         expr = statement[3:].strip()
         
-        # Handle cases like "I=1TO 5" or "I = 1 TO 5"
-        # First normalize the spacing around = and TO
+        # Handle cases like "I=1TO 5" or "I = 1 TO 5" with case insensitive keywords
+        # First normalize the spacing around = and TO/STEP
         expr = re.sub(r'\s*=\s*', ' = ', expr)
-        expr = re.sub(r'\s*TO\s*', ' TO ', expr)
-        expr = re.sub(r'\s*STEP\s*', ' STEP ', expr)
+        expr = re.sub(r'\s*TO\s*', ' TO ', expr, flags=re.IGNORECASE)
+        expr = re.sub(r'\s*STEP\s*', ' STEP ', expr, flags=re.IGNORECASE)
         
         parts = expr.split()
         
-        if len(parts) >= 5 and parts[1] == "=" and parts[3] == "TO":
+        # Find TO and STEP case-insensitively
+        to_idx = None
+        step_idx = None
+        for i, part in enumerate(parts):
+            if part.upper() == "TO":
+                to_idx = i
+            elif part.upper() == "STEP":
+                step_idx = i
+        
+        if len(parts) >= 5 and parts[1] == "=" and to_idx is not None:
             var = parts[0]
             start = parts[2]
-            end = parts[4]
+            end = parts[to_idx + 1]
             
-            if len(parts) >= 7 and parts[5] == "STEP":
-                step = parts[6]
+            if step_idx is not None and step_idx < len(parts) - 1:
+                step = parts[step_idx + 1]
                 return f"FOR {var} = {start} TO {end} STEP {step}"
             else:
                 return f"FOR {var} = {start} TO {end}"
@@ -117,12 +127,13 @@ class PyBASFormatter:
     
     def calculate_indentation(self, statement: str) -> int:
         """Calculate the indentation level for a statement"""
-        if statement.startswith("FOR"):
+        stmt_upper = statement.upper()
+        if stmt_upper.startswith("FOR"):
             current_indent = self.nest_level
             self.nest_level += 1
             self.for_stack.append(self.nest_level - 1)
             return current_indent
-        elif statement.startswith("NEXT"):
+        elif stmt_upper.startswith("NEXT"):
             if self.for_stack:
                 self.nest_level -= 1
                 return self.for_stack.pop()

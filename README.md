@@ -15,6 +15,7 @@ A lightweight BASIC language interpreter written in Python that allows you to wr
 - ✅ **Line-by-Line Execution** - Traditional BASIC line number programming
 - ✅ **Nested Loops** - Support for loops within loops
 - ✅ **Code Formatter** - Built-in pybasfmt tool for automatic code formatting and indentation
+- ✅ **Interactive REPL** - GW-BASIC style interactive programming environment with pybasrepl
 
 ## Installation
 
@@ -506,6 +507,114 @@ PyBAS includes a code formatter called `pybasfmt` that automatically formats and
 | `-l, --line-increment N` | Line number increment | 10 |
 | `--dry-run` | Preview without writing | Write files |
 
+### Interactive Programming with pybasrepl
+
+PyBAS includes a GW-BASIC style REPL (Read-Eval-Print Loop) that provides an interactive programming environment similar to classic BASIC interpreters.
+
+#### Starting the REPL
+
+```bash
+./pybasrepl
+```
+
+#### REPL Features
+
+- **Line-by-Line Programming**: Enter program lines with line numbers
+- **Immediate Execution**: Run programs with the RUN command
+- **Program Management**: Save, load, and manage program files
+- **AUTO Mode**: Automatic line numbering for faster programming
+- **Line Editing**: Add, modify, or delete program lines
+- **Classic Commands**: LIST, NEW, SAVE, LOAD, DIR, and more
+
+#### Basic REPL Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `[number] [statement]` | Enter/modify program line | `10 PRINT "Hello"` |
+| `[number]` | Delete program line | `10` (deletes line 10) |
+| `LIST` | Show entire program | `LIST` |
+| `LIST [line]` | Show specific line | `LIST 10` |
+| `LIST [start]-[end]` | Show line range | `LIST 10-50` |
+| `RUN` | Execute current program | `RUN` |
+| `NEW` | Clear current program | `NEW` |
+| `SAVE [filename]` | Save program to file | `SAVE myprog` |
+| `LOAD [filename]` | Load program from file | `LOAD myprog` |
+| `DIR` | List .pybas files | `DIR` |
+| `AUTO [start] [incr]` | Auto line numbering | `AUTO 100 5` |
+| `RENUM [start] [incr]` | Renumber lines | `RENUM 10 10` |
+| `HELP` | Show help | `HELP` |
+| `EXIT` or `QUIT` | Exit REPL | `EXIT` |
+
+#### Example REPL Session
+
+```
+PyBAS REPL v1.0
+GW-BASIC style interactive environment
+Type HELP for available commands
+
+> 10 PRINT "Hello, PyBAS!"
+Line 10 entered
+> 20 FOR I = 1 TO 3
+Line 20 entered
+> 30 PRINT "Count: " + str(I)
+Line 30 entered
+> 40 NEXT I
+Line 40 entered
+> 50 END
+Line 50 entered
+> LIST
+10 PRINT "Hello, PyBAS!"
+20 FOR I = 1 TO 3
+30 PRINT "Count: " + str(I)
+40 NEXT I
+50 END
+> RUN
+Running program...
+----------------------------------------
+Hello, PyBAS!
+Count: 1
+Count: 2
+Count: 3
+Program finished.
+----------------------------------------
+> SAVE demo
+Program saved as demo.pybas
+[demo.pybas] > EXIT
+Goodbye!
+```
+
+#### AUTO Mode for Faster Programming
+
+AUTO mode automatically assigns line numbers, making programming faster:
+
+```
+> AUTO 100 10
+AUTO mode ON - starting at 100, increment 10
+100 PRINT "Using AUTO mode"
+110 FOR I = 1 TO 5
+120   PRINT "Number: " + str(I)
+130 NEXT I
+140 END
+150 
+AUTO mode OFF
+> LIST
+100 PRINT "Using AUTO mode"
+110 FOR I = 1 TO 5
+120   PRINT "Number: " + str(I)
+130 NEXT I
+140 END
+```
+
+#### Program Management
+
+- **Save programs**: `SAVE filename` (automatically adds .pybas extension)
+- **Load programs**: `LOAD filename` 
+- **List files**: `DIR` shows all .pybas files in current directory
+- **Clear memory**: `NEW` removes current program
+- **Renumber**: `RENUM` reorganizes line numbers for better spacing
+
+The REPL provides the classic BASIC programming experience with modern conveniences!
+
 ### Running Programs
 
 **Method 1: Direct execution (recommended)**
@@ -682,6 +791,7 @@ This project is open source. Feel free to use, modify, and distribute.
 - **v1.1**: Added INPUT functionality with prompts and automatic type conversion
 - **v1.2**: Added FOR loop support with NEXT statements and STEP functionality
 - **v1.3**: Added pybasfmt code formatter with automatic indentation and formatting
+- **v1.4**: Added pybasrepl interactive REPL environment with AUTO, RENUM, and classic BASIC commands
 
 ---
 
