@@ -5,6 +5,7 @@ hello.pybas
 interactive.pybas
 loop.pybas
 pyproject.toml
+test_package.pybas
 examples/README.md
 examples/advanced_lists.pybas
 examples/calculator.pybas
@@ -50,9 +51,9 @@ src/pybas/__init__.py
 src/pybas/formatter.py
 src/pybas/interpreter.py
 src/pybas/repl.py
-src/pybas.egg-info/PKG-INFO
-src/pybas.egg-info/SOURCES.txt
-src/pybas.egg-info/dependency_links.txt
-src/pybas.egg-info/entry_points.txt
-src/pybas.egg-info/requires.txt
-src/pybas.egg-info/top_level.txt
+src/pybas_retro.egg-info/PKG-INFO
+src/pybas_retro.egg-info/SOURCES.txt
+src/pybas_retro.egg-info/dependency_links.txt
+src/pybas_retro.egg-info/entry_points.txt
+src/pybas_retro.egg-info/requires.txt
+src/pybas_retro.egg-info/top_level.txt

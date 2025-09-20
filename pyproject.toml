@@ -3,10 +3,10 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pybas"
+name = "pybas-retro"
 version = "1.0.0"
 authors = [
-    {name = "PyBAS Development Team", email = "pybas@example.com"},
+    {name = "PyBAS Development Team", email = "arfan.caesar@gmail.com"},
 ]
 description = "A lightweight BASIC language interpreter written in Python"
 readme = "README.md"
@@ -32,10 +32,10 @@ keywords = ["basic", "interpreter", "programming", "education", "retro", "vintag
 license = "MIT"
 
 [project.urls]
-Homepage = "https://github.com/your-username/pybas"
-Documentation = "https://github.com/your-username/pybas#readme"
-Repository = "https://github.com/your-username/pybas.git"
-"Bug Tracker" = "https://github.com/your-username/pybas/issues"
+Homepage = "https://github.com/arfan/pybas"
+Documentation = "https://github.com/arfan/pybas#readme"
+Repository = "https://github.com/arfan/pybas.git"
+"Bug Tracker" = "https://github.com/arfan/pybas/issues"
 
 [project.scripts]
 pybas = "pybas.interpreter:main"

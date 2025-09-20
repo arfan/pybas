@@ -24,13 +24,13 @@ A lightweight BASIC language interpreter written in Python that allows you to wr
 ### From PyPI (Recommended)
 
 ```bash
-pip install pybas
+pip install pybas-retro
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/your-username/pybas.git
+git clone https://github.com/arfan/pybas.git
 cd pybas
 pip install .
 ```
