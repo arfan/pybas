@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: pybas-retro
-Version: 1.0.0
+Version: 1.0.1
 Summary: A lightweight BASIC language interpreter written in Python
 Author-email: PyBAS Development Team <arfan.caesar@gmail.com>
 License-Expression: MIT

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybas-retro"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
     {name = "PyBAS Development Team", email = "arfan.caesar@gmail.com"},
 ]
