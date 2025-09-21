@@ -12,6 +12,9 @@ A lightweight BASIC language interpreter written in Python that allows you to wr
 - ✅ **Output** - Display results with PRINT statements
 - ✅ **Input** - Interactive user input with INPUT statements
 - ✅ **Loop Control** - FOR loops with STEP support for iteration
+- ✅ **Subroutines** - GOSUB/RETURN for modular programming
+- ✅ **Functions** - DEF...ENDDEF for Python-like function definitions with parameters and return values
+- ✅ **Conditional Logic** - IF...GOTO statements for branching
 - ✅ **Comments** - Document your code with single quote comments
 - ✅ **Automatic Type Conversion** - Seamless handling of numbers and strings
 - ✅ **Line-by-Line Execution** - Traditional BASIC line number programming
