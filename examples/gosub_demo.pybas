@@ -1,0 +1,25 @@
+10 PRINT "=== GOSUB/RETURN Demo ==="
+20 PRINT "Main program calling subroutine A"
+30 GOSUB 100
+40 PRINT "Back from subroutine A"
+50 PRINT "Main program calling subroutine B"
+60 GOSUB 150
+70 PRINT "Back from subroutine B"
+80 PRINT "Program complete"
+90 END
+100 PRINT "  In subroutine A"
+110 PRINT "  Subroutine A calling subroutine C"
+120 GOSUB 230
+130 PRINT "  Subroutine A back from C"
+140 RETURN
+150 PRINT "  In subroutine B"
+160 LET COUNT = 3
+170 PRINT "  Counting down from 3:"
+180 PRINT COUNT
+190 LET COUNT = COUNT - 1
+200 IF COUNT > 0 GOTO 170
+210 PRINT "  Done counting!"
+220 RETURN
+230 PRINT "    Deep in subroutine C"
+240 PRINT "    This is a nested call"
+250 RETURN

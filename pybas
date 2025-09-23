@@ -9,6 +9,9 @@ class BasicInterpreter:
         self.pc = None
         self.stack = []
         self.for_stack = []  # Stack for FOR loops
+        self.gosub_stack = []  # Stack for GOSUB/RETURN subroutines
+        self.functions = {}  # Store DEF...ENDDEF function definitions
+        self.function_call_stack = []  # Stack for function calls with local variables
 
         # Load program into a dict {line_number: statement}
         for line in program_lines:
@@ -18,12 +21,201 @@ class BasicInterpreter:
             num, stmt = line.split(" ", 1)
             self.program[int(num)] = stmt.strip()
 
+        # Parse and store function definitions
+        self.parse_functions()
+        
         self.pc = min(self.program.keys())
+
+    def parse_functions(self):
+        """Parse DEF...ENDDEF function definitions and store them"""
+        sorted_lines = sorted(self.program.keys())
+        i = 0
+        
+        while i < len(sorted_lines):
+            line_num = sorted_lines[i]
+            stmt = self.program[line_num].upper()
+            
+            if stmt.startswith("DEF "):
+                # Found function definition
+                func_line = self.program[line_num]
+                func_name, params = self.parse_def_statement(func_line)
+                
+                # Find the matching ENDDEF
+                func_body = {}
+                i += 1
+                
+                while i < len(sorted_lines):
+                    body_line_num = sorted_lines[i]
+                    body_stmt = self.program[body_line_num]
+                    
+                    if body_stmt.upper().strip() == "ENDDEF":
+                        # Found end of function
+                        break
+                    else:
+                        # Add line to function body
+                        func_body[body_line_num] = body_stmt
+                    i += 1
+                
+                if i >= len(sorted_lines):
+                    print(f"Error: DEF {func_name} missing ENDDEF")
+                    sys.exit(1)
+                
+                # Store function definition
+                self.functions[func_name.upper()] = {
+                    'params': params,
+                    'body': func_body,
+                    'def_line': line_num
+                }
+                
+                # Remove function lines from main program
+                del self.program[line_num]  # DEF line
+                for body_line in func_body:
+                    del self.program[body_line]
+                del self.program[sorted_lines[i]]  # ENDDEF line
+            
+            i += 1
+
+    def parse_def_statement(self, stmt):
+        """Parse DEF statement and extract function name and parameters"""
+        # Example: DEF CALCULATE(X, Y)
+        parts = stmt[4:].strip()  # Remove "DEF "
+        
+        if '(' in parts and ')' in parts:
+            func_name = parts[:parts.index('(')].strip()
+            param_part = parts[parts.index('(') + 1:parts.rindex(')')].strip()
+            
+            if param_part:
+                params = [p.strip() for p in param_part.split(',')]
+            else:
+                params = []
+        else:
+            # Function without parameters
+            func_name = parts.strip()
+            params = []
+        
+        return func_name, params
+
+    def try_execute_function_call(self, stmt):
+        """Try to execute a statement as a function call"""
+        try:
+            # Parse potential function call
+            if '(' not in stmt or ')' not in stmt:
+                return False
+            
+            func_name_part = stmt[:stmt.index('(')].strip()
+            
+            # Check if it's a variable assignment with function call
+            if '=' in func_name_part:
+                # Example: RESULT = CALCULATE(5, 3)
+                var_name, func_call = func_name_part.split('=', 1)
+                var_name = var_name.strip()
+                func_name = func_call.strip()
+            else:
+                # Direct function call: CALCULATE(5, 3)
+                var_name = None
+                func_name = func_name_part
+            
+            # Extract parameters
+            param_part = stmt[stmt.index('(') + 1:stmt.rindex(')')].strip()
+            if param_part:
+                # Evaluate each parameter
+                param_values = []
+                for param in param_part.split(','):
+                    param_values.append(self.safe_eval(param.strip(), self.pc))
+            else:
+                param_values = []
+            
+            # Check if function exists
+            if func_name.upper() not in self.functions:
+                return False
+            
+            # Call the function
+            result = self.call_function(func_name.upper(), param_values)
+            
+            # Store result if variable assignment
+            if var_name:
+                self.vars[var_name] = result
+            
+            return True
+            
+        except Exception:
+            return False
+
+    def call_function(self, func_name, param_values):
+        """Execute a user-defined function"""
+        func_def = self.functions[func_name]
+        
+        # Check parameter count
+        if len(param_values) != len(func_def['params']):
+            print(f"Error on line {self.pc}: Function {func_name} expects {len(func_def['params'])} parameters, got {len(param_values)}")
+            sys.exit(1)
+        
+        # Save current variable state
+        saved_vars = self.vars.copy()
+        
+        # Set function parameters as local variables
+        for i, param_name in enumerate(func_def['params']):
+            self.vars[param_name] = param_values[i]
+        
+        # Save current execution state
+        saved_pc = self.pc
+        saved_program = self.program
+        
+        # Execute function body
+        self.program = func_def['body']
+        if self.program:
+            self.pc = min(self.program.keys())
+            
+            return_value = None
+            
+            while self.pc in self.program:
+                stmt = self.program[self.pc]
+                stmt_upper = stmt.upper()
+                
+                # Handle RETURN with value
+                if stmt_upper.startswith("RETURN"):
+                    parts = stmt.split(None, 1)
+                    if len(parts) > 1:
+                        # RETURN expression
+                        return_value = self.safe_eval(parts[1], self.pc)
+                    else:
+                        # Just RETURN
+                        return_value = None
+                    break
+                
+                # Execute statement
+                next_pc = self.execute(stmt)
+                
+                if next_pc is not None:
+                    self.pc = next_pc
+                else:
+                    # Move to next line
+                    next_lines = sorted([n for n in self.program if n > self.pc])
+                    self.pc = next_lines[0] if next_lines else None
+        else:
+            return_value = None
+        
+        # Restore execution state
+        self.pc = saved_pc
+        self.program = saved_program
+        
+        # Restore variables (keeping only new global variables)
+        new_vars = {}
+        for var, value in self.vars.items():
+            if var not in func_def['params'] and var not in saved_vars:
+                new_vars[var] = value
+        
+        self.vars = saved_vars
+        self.vars.update(new_vars)
+        
+        return return_value if return_value is not None else 0
 
     def safe_eval(self, expression, line_num=None):
         """Safely evaluate a Python expression with user-friendly error messages."""
         try:
-            return eval(expression, {}, self.vars)
+            # Pre-process function calls in expressions
+            processed_expr = self.preprocess_function_calls(expression)
+            return eval(processed_expr, {}, self.vars)
         except ZeroDivisionError:
             error_msg = f"Error on line {line_num}: Division by zero"
             print(error_msg)
@@ -49,6 +241,42 @@ class BasicInterpreter:
             error_msg = f"Error on line {line_num}: {str(e)}"
             print(error_msg)
             sys.exit(1)
+
+    def preprocess_function_calls(self, expression):
+        """Replace function calls in expressions with their return values"""
+        import re
+        
+        # Find function calls: WORD(params)
+        pattern = r'([A-Z_][A-Z0-9_]*)\s*\(([^)]*)\)'
+        
+        def replace_func_call(match):
+            func_name = match.group(1).upper()
+            params_str = match.group(2).strip()
+            
+            # Check if this is a user-defined function
+            if func_name in self.functions:
+                # Evaluate parameters
+                if params_str:
+                    param_values = []
+                    for param in params_str.split(','):
+                        param_values.append(self.safe_eval(param.strip(), self.pc))
+                else:
+                    param_values = []
+                
+                # Call function and return the result
+                result = self.call_function(func_name, param_values)
+                return str(result)
+            else:
+                # Not a user function, return as-is
+                return match.group(0)
+        
+        # Keep replacing until no more function calls found
+        prev_expr = ""
+        while prev_expr != expression:
+            prev_expr = expression
+            expression = re.sub(pattern, replace_func_call, expression, flags=re.IGNORECASE)
+        
+        return expression
 
     def handle_if_statement(self, stmt, stmt_upper):
         """Handle IF...GOTO statements with comparison operators"""
@@ -119,13 +347,21 @@ class BasicInterpreter:
             if next_pc is not None:
                 self.pc = next_pc
             else:
-                # Move to next line if not changed by GOTO/GOSUB
+                # Move to next line if not changed by GOTO/GOSUB/RETURN
                 next_lines = sorted([n for n in self.program if n > self.pc])
                 self.pc = next_lines[0] if next_lines else None
 
     def execute(self, stmt):
         # Convert statement to uppercase for case-insensitive keyword matching
         stmt_upper = stmt.upper()
+        
+        # Check if this might be a function call (contains parentheses but not IF/FOR/INPUT)
+        if ('(' in stmt and ')' in stmt and 
+            not stmt_upper.startswith(('IF ', 'FOR ', 'INPUT ', 'PRINT '))):
+            
+            # Try to parse as function call
+            if self.try_execute_function_call(stmt):
+                return None
         
         if stmt_upper.startswith("GOTO"):
             # Example: GOTO 100
@@ -139,6 +375,40 @@ class BasicInterpreter:
             except (IndexError, ValueError):
                 print(f"Error on line {self.pc}: Invalid GOTO syntax")
                 sys.exit(1)
+        
+        elif stmt_upper.startswith("GOSUB"):
+            # Example: GOSUB 1000
+            try:
+                target_line = int(stmt_upper.split()[1])
+                if target_line in self.program:
+                    # Find the next line after current line for return address
+                    next_lines = sorted([n for n in self.program if n > self.pc])
+                    return_address = next_lines[0] if next_lines else None
+                    
+                    # Push return address onto gosub stack
+                    self.gosub_stack.append(return_address)
+                    
+                    # Jump to subroutine
+                    return target_line
+                else:
+                    print(f"Error on line {self.pc}: GOSUB target line {target_line} does not exist")
+                    sys.exit(1)
+            except (IndexError, ValueError):
+                print(f"Error on line {self.pc}: Invalid GOSUB syntax")
+                sys.exit(1)
+        
+        elif stmt_upper.startswith("RETURN"):
+            # Return from subroutine
+            if not self.gosub_stack:
+                print(f"Error on line {self.pc}: RETURN without GOSUB")
+                sys.exit(1)
+            
+            return_address = self.gosub_stack.pop()
+            if return_address is not None:
+                return return_address
+            else:
+                # End of program
+                return None
         
         elif stmt_upper.startswith("IF"):
             # Example: IF X = 5 GOTO 100
@@ -242,6 +512,16 @@ class BasicInterpreter:
 
         elif stmt_upper.startswith("REM"):
             # Comment - do nothing
+            pass
+
+        elif stmt_upper.startswith("DEF "):
+            # Function definition - should have been removed during parsing, skip
+            print(f"Warning: DEF statement found during execution on line {self.pc}")
+            pass
+
+        elif stmt_upper.startswith("ENDDEF"):
+            # End of function definition - should have been removed during parsing, skip
+            print(f"Warning: ENDDEF statement found during execution on line {self.pc}")
             pass
 
         else:

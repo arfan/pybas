@@ -1,0 +1,9 @@
+10 PRINT "Simple function test"
+20 RESULT = DOUBLE(5)
+30 PRINT "Double of 5 is:"
+40 PRINT RESULT
+50 END
+
+100 DEF DOUBLE(X)
+110   RETURN X * 2
+120 ENDDEF

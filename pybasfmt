@@ -52,6 +52,16 @@ class PyBASFormatter:
             return self.format_for_statement(statement)
         elif stmt_upper.startswith("NEXT"):
             return self.format_next_statement(statement)
+        elif stmt_upper.startswith("GOSUB"):
+            return self.format_gosub_statement(statement)
+        elif stmt_upper.startswith("GOTO"):
+            return self.format_goto_statement(statement)
+        elif stmt_upper.startswith("RETURN"):
+            return self.format_return_statement(statement)
+        elif stmt_upper.startswith("DEF "):
+            return self.format_def_statement(statement)
+        elif stmt_upper.startswith("ENDDEF"):
+            return "ENDDEF"
         elif stmt_upper.startswith("END"):
             return "END"
         else:
@@ -125,6 +135,36 @@ class PyBASFormatter:
         else:
             return "NEXT"
     
+    def format_gosub_statement(self, statement: str) -> str:
+        """Format GOSUB statements"""
+        expr = statement[5:].strip()  # Remove "GOSUB"
+        return f"GOSUB {expr}"
+    
+    def format_goto_statement(self, statement: str) -> str:
+        """Format GOTO statements"""
+        expr = statement[4:].strip()  # Remove "GOTO"
+        return f"GOTO {expr}"
+    
+    def format_return_statement(self, statement: str) -> str:
+        """Format RETURN statements"""
+        parts = statement.split(None, 1)
+        if len(parts) > 1:
+            return f"RETURN {parts[1]}"
+        else:
+            return "RETURN"
+    
+    def format_def_statement(self, statement: str) -> str:
+        """Format DEF statements"""
+        expr = statement[3:].strip()  # Remove "DEF"
+        
+        # Add proper spacing around parentheses
+        if '(' in expr and ')' in expr:
+            func_name = expr[:expr.index('(')].strip()
+            param_part = expr[expr.index('('):].strip()
+            return f"DEF {func_name}{param_part}"
+        else:
+            return f"DEF {expr}"
+    
     def calculate_indentation(self, statement: str) -> int:
         """Calculate the indentation level for a statement"""
         stmt_upper = statement.upper()
@@ -138,6 +178,13 @@ class PyBASFormatter:
                 self.nest_level -= 1
                 return self.for_stack.pop()
             return max(0, self.nest_level - 1)
+        elif stmt_upper.startswith("DEF "):
+            current_indent = self.nest_level
+            self.nest_level += 1
+            return current_indent
+        elif stmt_upper.startswith("ENDDEF"):
+            self.nest_level = max(0, self.nest_level - 1)
+            return self.nest_level
         else:
             return self.nest_level
     

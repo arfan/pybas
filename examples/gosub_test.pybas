@@ -1,0 +1,12 @@
+10 PRINT "Main program starts"
+20 LET X = 5
+30 GOSUB 100
+40 PRINT "Back in main program"
+50 LET Y = 10
+60 GOSUB 100
+70 PRINT "Main program ends"
+80 END
+100 PRINT "In subroutine, X ="
+110 PRINT X
+120 LET X = X + 1
+130 RETURN

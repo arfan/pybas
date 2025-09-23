@@ -1,0 +1,53 @@
+10 PRINT "=== Advanced Function Demo ==="
+
+' Test function with no parameters
+20 PRINT "Current time stamp:"
+30 TIMESTAMP()
+
+' Test function with return value
+40 PRINT "Factorial of 5:"
+50 RESULT = FACTORIAL(5)
+60 PRINT RESULT
+
+' Test function that modifies global variables
+70 COUNTER = 0
+80 PRINT "Counter before:"
+90 PRINT COUNTER
+100 INCREMENT()
+110 PRINT "Counter after increment:"
+120 PRINT COUNTER
+
+' Test recursive function
+130 PRINT "Fibonacci of 7:"
+140 RESULT = FIBONACCI(7)
+150 PRINT RESULT
+
+160 END
+
+' Function with no parameters
+200 DEF TIMESTAMP()
+210   PRINT "Function called at runtime"
+220   RETURN
+230 ENDDEF
+
+' Function with return value
+300 DEF FACTORIAL(N)
+310   IF N <= 1 GOTO 340
+320   RESULT = N * FACTORIAL(N - 1)
+330   RETURN RESULT
+340   RETURN 1
+350 ENDDEF
+
+' Function that modifies global variable
+400 DEF INCREMENT()
+410   COUNTER = COUNTER + 1
+420   RETURN
+430 ENDDEF
+
+' Recursive function
+500 DEF FIBONACCI(N)
+510   IF N <= 1 GOTO 540
+520   RESULT = FIBONACCI(N - 1) + FIBONACCI(N - 2)
+530   RETURN RESULT
+540   RETURN N
+550 ENDDEF
