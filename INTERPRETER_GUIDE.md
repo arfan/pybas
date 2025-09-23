@@ -131,6 +131,187 @@ def run(self):
             self.pc = next_lines[0] if next_lines else None
 ```
 
+### How the Interpreter Determines the Next Line Number
+
+This is one of the most fundamental aspects of BASIC execution. The interpreter uses a **two-step process** to determine which line to execute next:
+
+#### **The Core Algorithm**
+
+```python
+# Step 1: Execute current statement and check if it wants to jump
+next_pc = self.execute(stmt)
+
+# Step 2: Decide where to go next
+if next_pc is not None:
+    self.pc = next_pc                    # Jump to specific line
+else:
+    # Find next sequential line
+    next_lines = sorted([n for n in self.program if n > self.pc])
+    self.pc = next_lines[0] if next_lines else None
+```
+
+#### **Step 1: Jump Detection**
+
+The `execute()` method returns either:
+- **A specific line number** (for jump instructions)
+- **`None`** (for sequential execution)
+
+**Jump-causing statements:**
+```python
+# GOTO always jumps
+if stmt_upper.startswith("GOTO"):
+    target_line = int(stmt_upper.split()[1])
+    return target_line  # Returns specific line number
+
+# IF...GOTO conditionally jumps
+elif stmt_upper.startswith("IF"):
+    if condition_result:
+        return target_line  # Jump if condition is true
+    else:
+        return None        # Continue sequentially if false
+
+# GOSUB jumps to subroutine
+elif stmt_upper.startswith("GOSUB"):
+    target_line = int(stmt_upper.split()[1])
+    self.gosub_stack.append(return_address)  # Save return address
+    return target_line  # Jump to subroutine
+
+# RETURN jumps back from subroutine
+elif stmt_upper.startswith("RETURN"):
+    return_address = self.gosub_stack.pop()
+    return return_address  # Jump back to caller
+
+# NEXT can jump back to FOR loop
+elif stmt_upper.startswith("NEXT"):
+    # ... loop logic ...
+    if loop_should_continue:
+        return for_line_after_current  # Jump back to loop body
+    else:
+        return None  # Exit loop, continue sequentially
+```
+
+#### **Step 2: Sequential Line Finding**
+
+When no jump occurs (`next_pc is None`), the interpreter finds the next sequential line:
+
+```python
+# Find all line numbers greater than current PC
+next_lines = sorted([n for n in self.program if n > self.pc])
+
+# Take the first (smallest) line number, or None if no more lines
+self.pc = next_lines[0] if next_lines else None
+```
+
+#### **Why This Algorithm Works**
+
+BASIC programs don't require consecutive line numbers! Consider this program:
+
+```pybas
+10 PRINT "Start"
+30 LET X = 5        # Note: line 20 is missing!
+50 PRINT X
+100 PRINT "End"
+```
+
+**Execution sequence:** `10 → 30 → 50 → 100`
+
+**Step-by-step trace:**
+
+1. **At line 10**: No jump, so find next line > 10
+   - Available lines: `[30, 50, 100]`
+   - Next PC = 30
+
+2. **At line 30**: No jump, so find next line > 30
+   - Available lines: `[50, 100]`  
+   - Next PC = 50
+
+3. **At line 50**: No jump, so find next line > 50
+   - Available lines: `[100]`
+   - Next PC = 100
+
+4. **At line 100**: No jump, so find next line > 100
+   - Available lines: `[]`
+   - Next PC = None (program ends)
+
+#### **Example: Program with Jumps**
+
+```pybas
+10 PRINT "Start"
+20 GOTO 100
+30 PRINT "This won't execute"
+100 PRINT "Jumped here"
+110 END
+```
+
+**Execution trace:**
+
+1. **Line 10**: `PRINT "Start"`
+   - `execute()` returns `None` (no jump)
+   - Next line algorithm: lines > 10 = `[20, 30, 100, 110]`
+   - PC = 20
+
+2. **Line 20**: `GOTO 100`
+   - `execute()` returns `100` (jump!)
+   - PC = 100 (direct assignment)
+
+3. **Line 100**: `PRINT "Jumped here"`
+   - `execute()` returns `None` (no jump)  
+   - Next line algorithm: lines > 100 = `[110]`
+   - PC = 110
+
+4. **Line 110**: `END`
+   - Program terminates
+
+#### **Example: Loop Handling**
+
+```pybas
+10 FOR I = 1 TO 3
+20   PRINT I
+30 NEXT I
+40 PRINT "Done"
+```
+
+**Execution trace:**
+
+1. **Line 10**: `FOR I = 1 TO 3` (sets I = 1)
+   - `execute()` returns `None`
+   - PC = 20
+
+2. **Line 20**: `PRINT I` (prints 1)
+   - `execute()` returns `None`
+   - PC = 30
+
+3. **Line 30**: `NEXT I` (increments I to 2, checks I <= 3)
+   - Loop continues: `execute()` returns `20` (jump back)
+   - PC = 20
+
+4. **Line 20**: `PRINT I` (prints 2)
+   - PC = 30
+
+5. **Line 30**: `NEXT I` (increments I to 3, checks I <= 3)
+   - Loop continues: `execute()` returns `20`
+   - PC = 20
+
+6. **Line 20**: `PRINT I` (prints 3)
+   - PC = 30
+
+7. **Line 30**: `NEXT I` (increments I to 4, checks I <= 3)
+   - Loop exits: `execute()` returns `None`
+   - Next line algorithm: lines > 30 = `[40]`
+   - PC = 40
+
+8. **Line 40**: `PRINT "Done"`
+
+#### **Key Algorithm Features**
+
+1. **Non-consecutive line numbers** are handled automatically by the sorting algorithm
+2. **Jump instructions override** sequential flow by returning a specific line number
+3. **The sorting operation** ensures the interpreter always finds the next valid line
+4. **Flexible line numbering** allows schemes like 10, 20, 30... or 100, 200, 300...
+5. **Performance trade-off**: Sorting happens on every sequential step, but BASIC programs are typically small
+
+This algorithm is what makes BASIC's flexible line numbering system possible while maintaining predictable execution flow!
+
 #### 2. Jump Instructions (GOTO)
 
 ```python
