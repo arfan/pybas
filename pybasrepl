@@ -726,6 +726,7 @@ class PyBASREPL:
         print("  DIR                   - List .pybas files")
         print()
         print("System:")
+        print("  CLS                   - Clear screen")
         print("  HELP                  - Show this help")
         print("  EXIT or QUIT          - Exit REPL")
         print()
@@ -741,6 +742,12 @@ class PyBASREPL:
         print("  LIST                  - Show program")
         print("  RUN                   - Execute program")
         print("  SAVE hello            - Save as hello.pybas")
+    
+    def cmd_cls(self, args: List[str]):
+        """CLS command - clear the screen"""
+        # Clear screen using ANSI escape codes (works on most terminals)
+        import os
+        os.system('cls' if os.name == 'nt' else 'clear')
     
     def cmd_exit(self, args: List[str]):
         """EXIT command - quit the REPL"""
@@ -764,6 +771,7 @@ class PyBASREPL:
             'AUTO': self.cmd_auto,
             'RENUM': self.cmd_renum,
             'FORMAT': self.cmd_format,
+            'CLS': self.cmd_cls,
             'HELP': self.cmd_help,
             'EXIT': self.cmd_exit,
             'QUIT': self.cmd_exit,
