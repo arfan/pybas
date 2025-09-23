@@ -1,5 +1,0 @@
-
-[dev]
-build
-twine
-pytest

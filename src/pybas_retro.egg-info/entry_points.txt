@@ -1,4 +1,0 @@
-[console_scripts]
-pybas = pybas.interpreter:main
-pybasfmt = pybas.formatter:main
-pybasrepl = pybas.repl:main
