@@ -709,6 +709,7 @@ class PyBASREPL:
         print("Program Editing:")
         print("  [number] [statement]  - Enter or modify program line")
         print("  [number]              - Delete program line")
+        print("  EDIT [line]           - Load line for editing with current content")
         print("  LIST                  - Show entire program")
         print("  LIST [line]           - Show specific line")
         print("  LIST [start]-[end]    - Show range of lines")
@@ -739,10 +740,67 @@ class PyBASREPL:
         print("  FORMAT                - Format with defaults (2 spaces, increment 10)")
         print("  FORMAT 4              - Format with 4-space indentation")
         print("  FORMAT 4 5            - Format with 4 spaces, increment 5")
+        print("  EDIT 50               - Edit line 50 (shows current content)")
         print("  LIST                  - Show program")
         print("  RUN                   - Execute program")
         print("  SAVE hello            - Save as hello.pybas")
     
+    def cmd_edit(self, args: List[str]):
+        """EDIT command - load and edit a specific line number"""
+        if not args:
+            print("Usage: EDIT line_number")
+            return
+            
+        try:
+            line_num = int(args[0])
+        except ValueError:
+            print("Error: Line number must be a number")
+            return
+            
+        # Check if line exists
+        if line_num not in self.program_lines:
+            print(f"Line {line_num} does not exist")
+            response = input(f"Create new line {line_num}? (y/n): ").strip().lower()
+            if response not in ['y', 'yes']:
+                return
+            current_statement = ""
+        else:
+            current_statement = self.program_lines[line_num]
+            print(f"Current line {line_num}: {current_statement}")
+        
+        # Get new statement with pre-filled content
+        try:
+            import readline
+            # Pre-fill the input line with the current statement
+            def startup_hook():
+                readline.insert_text(current_statement)
+                readline.redisplay()
+            readline.set_startup_hook(startup_hook)
+            
+            new_statement = input(f"{line_num} ").strip()
+            readline.set_startup_hook(None)  # Clear the hook
+            
+        except ImportError:
+            # Fallback if readline is not available
+            print(f"Edit line {line_num} (current: {current_statement})")
+            new_statement = input(f"{line_num} ").strip()
+        
+        # Handle the new statement
+        if new_statement:
+            self.program_lines[line_num] = new_statement
+            print(f"Line {line_num} updated")
+        else:
+            # Empty input - ask if they want to delete the line
+            if line_num in self.program_lines:
+                response = input(f"Delete line {line_num}? (y/n): ").strip().lower()
+                if response in ['y', 'yes']:
+                    del self.program_lines[line_num]
+                    print(f"Line {line_num} deleted")
+                else:
+                    print("Line unchanged")
+            else:
+                print("No line created")
+
     def cmd_cls(self, args: List[str]):
         """CLS command - clear the screen"""
         # Clear screen using ANSI escape codes (works on most terminals)
@@ -771,6 +829,7 @@ class PyBASREPL:
             'AUTO': self.cmd_auto,
             'RENUM': self.cmd_renum,
             'FORMAT': self.cmd_format,
+            'EDIT': self.cmd_edit,
             'CLS': self.cmd_cls,
             'HELP': self.cmd_help,
             'EXIT': self.cmd_exit,
