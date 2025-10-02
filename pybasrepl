@@ -380,7 +380,7 @@ class PyBASFormatter:
         else:
             return self.nest_level
     
-    def format_program(self, program_dict: Dict[int, str]) -> Dict[int, str]:
+    def format_program(self, program_dict: Dict[int, str], preserve_line_numbers: bool = True) -> Dict[int, str]:
         """Format program dictionary and return new program dict"""
         formatted_program = {}
         statements = [(line_num, stmt) for line_num, stmt in program_dict.items()]
@@ -390,19 +390,33 @@ class PyBASFormatter:
         self.nest_level = 0
         self.for_stack = []
         
-        new_line_num = self.line_increment
-        
-        for original_line_num, statement in statements:
-            # Calculate indentation
-            indent_level = self.calculate_indentation(statement)
-            indent = " " * (indent_level * self.indent_size)
+        if preserve_line_numbers:
+            # Keep original line numbers
+            for original_line_num, statement in statements:
+                # Calculate indentation
+                indent_level = self.calculate_indentation(statement)
+                indent = " " * (indent_level * self.indent_size)
+                
+                # Format the statement
+                formatted_statement = self.format_statement(statement)
+                
+                # Store in program dict with original line number and indentation
+                formatted_program[original_line_num] = f"{indent}{formatted_statement}"
+        else:
+            # Use new sequential line numbers
+            new_line_num = self.line_increment
             
-            # Format the statement
-            formatted_statement = self.format_statement(statement)
-            
-            # Store in new program dict with indentation
-            formatted_program[new_line_num] = f"{indent}{formatted_statement}"
-            new_line_num += self.line_increment
+            for original_line_num, statement in statements:
+                # Calculate indentation
+                indent_level = self.calculate_indentation(statement)
+                indent = " " * (indent_level * self.indent_size)
+                
+                # Format the statement
+                formatted_statement = self.format_statement(statement)
+                
+                # Store in new program dict with indentation
+                formatted_program[new_line_num] = f"{indent}{formatted_statement}"
+                new_line_num += self.line_increment
         
         return formatted_program
 
@@ -657,15 +671,27 @@ class PyBASREPL:
         
         indent_size = 2
         line_increment = 10
+        preserve_lines = True  # Default to preserving line numbers
         
         # Parse arguments for custom formatting options
         if args:
             try:
-                if len(args) >= 1:
-                    indent_size = int(args[0])
-                if len(args) >= 2:
-                    line_increment = int(args[1])
+                i = 0
+                while i < len(args):
+                    arg = args[i]
                     
+                    if arg == '--renumber' or arg == '-r':
+                        preserve_lines = False
+                        i += 1
+                    elif arg.isdigit():
+                        if i == 0 or (i == 1 and not preserve_lines):
+                            indent_size = int(arg)
+                        elif i == 1 or (i == 2 and not preserve_lines):
+                            line_increment = int(arg)
+                        i += 1
+                    else:
+                        raise ValueError(f"Unknown argument: {arg}")
+                        
                 if indent_size < 0 or indent_size > 8:
                     print("Error: Indent size must be between 0 and 8")
                     return
@@ -673,20 +699,25 @@ class PyBASREPL:
                     print("Error: Line increment must be between 1 and 100")
                     return
                     
-            except ValueError:
-                print("Error: Invalid arguments. Usage: FORMAT [indent_size] [line_increment]")
-                print("Example: FORMAT 4 5")
+            except ValueError as e:
+                print(f"Error: Invalid arguments. {e}")
+                print("Usage: FORMAT [indent_size] [line_increment] [--renumber|-r]")
+                print("Example: FORMAT 4         # 4-space indent, preserve line numbers")
+                print("Example: FORMAT 2 10 -r   # 2-space indent, renumber with increment 10")
                 return
         
         try:
             # Create formatter and format the current program
             formatter = PyBASFormatter(indent_size, line_increment)
-            formatted_program = formatter.format_program(self.program_lines)
+            formatted_program = formatter.format_program(self.program_lines, preserve_lines)
             
             # Replace the current program with formatted version
             self.program_lines = formatted_program
             
-            print(f"Program formatted with {indent_size}-space indentation and {line_increment} line increment")
+            if preserve_lines:
+                print(f"Program formatted with {indent_size}-space indentation (line numbers preserved)")
+            else:
+                print(f"Program formatted with {indent_size}-space indentation and {line_increment} line increment")
             print("Use LIST to see the formatted program")
             
         except Exception as e:
@@ -715,7 +746,7 @@ class PyBASREPL:
         print("  LIST [start]-[end]    - Show range of lines")
         print("  AUTO [start] [incr]   - Automatic line numbering")
         print("  RENUM [start] [incr]  - Renumber program lines")
-        print("  FORMAT [indent] [inc] - Format program with indentation")
+        print("  FORMAT [indent] [inc] - Format program with indentation (preserves line numbers)")
         print()
         print("Program Management:")
         print("  RUN                   - Execute current program")
@@ -737,9 +768,9 @@ class PyBASREPL:
         print("  PRINT \"Hello\"         - (in AUTO mode)")
         print("  FOR I = 1 TO 5        - (in AUTO mode)")
         print("  RENUM 10 10           - Renumber from 10, increment 10")
-        print("  FORMAT                - Format with defaults (2 spaces, increment 10)")
+        print("  FORMAT                - Format with defaults (2 spaces, preserve line numbers)")
         print("  FORMAT 4              - Format with 4-space indentation")
-        print("  FORMAT 4 5            - Format with 4 spaces, increment 5")
+        print("  FORMAT 4 --renumber   - Format with 4 spaces and renumber lines")
         print("  EDIT 50               - Edit line 50 (shows current content)")
         print("  LIST                  - Show program")
         print("  RUN                   - Execute program")

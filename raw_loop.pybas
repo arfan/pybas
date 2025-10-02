@@ -1,0 +1,8 @@
+10 REM Loop Control
+20 PRINT "Counting from 1 to 5:"
+30 LET I = 1
+40 PRINT "Number " + str(I)
+50 IF I >= 5 GOTO 80
+60 LET I = I + 1
+70 GOTO 40
+80 END
