@@ -28,6 +28,7 @@ class BasicInterpreter:
         self.pc = None
         self.stack = []
         self.for_stack = []  # Stack for FOR loops
+        self.imported_modules = {}  # Store imported Python modules
 
         # Load program into a dict {line_number: statement}
         for line in program_lines:
@@ -42,7 +43,19 @@ class BasicInterpreter:
     def safe_eval(self, expression, line_num=None):
         """Safely evaluate a Python expression with user-friendly error messages."""
         try:
-            return eval(expression, {}, self.vars)
+            # Create globals dict with imported modules and common functions
+            eval_globals = {
+                '__builtins__': {
+                    'abs': abs, 'round': round, 'int': int, 'float': float, 'str': str,
+                    'len': len, 'min': min, 'max': max, 'sum': sum, 'sorted': sorted,
+                    'list': list, 'dict': dict, 'tuple': tuple, 'set': set,
+                    'range': range, 'enumerate': enumerate, 'zip': zip,
+                    'print': print
+                }
+            }
+            eval_globals.update(self.imported_modules)
+            
+            return eval(expression, eval_globals, self.vars)
         except ZeroDivisionError:
             error_msg = f"Error on line {line_num}: Division by zero"
             print(error_msg)
@@ -365,6 +378,63 @@ class PyBASFormatter:
         expr = statement[4:].strip()
         return f"GOTO {expr}"
     
+    def update_line_references(self, statement: str, line_mapping: Dict[int, int]) -> str:
+        """Update GOTO and GOSUB line references in a statement"""
+        stmt_upper = statement.upper()
+        
+        # Handle GOTO statements
+        if stmt_upper.startswith("GOTO "):
+            parts = statement.split(None, 1)
+            if len(parts) == 2:
+                try:
+                    old_line = int(parts[1])
+                    if old_line in line_mapping:
+                        return f"{parts[0]} {line_mapping[old_line]}"
+                except ValueError:
+                    pass
+        
+        # Handle GOSUB statements
+        elif stmt_upper.startswith("GOSUB "):
+            parts = statement.split(None, 1)
+            if len(parts) == 2:
+                try:
+                    old_line = int(parts[1])
+                    if old_line in line_mapping:
+                        return f"{parts[0]} {line_mapping[old_line]}"
+                except ValueError:
+                    pass
+        
+        # Handle IF...GOTO statements
+        elif stmt_upper.startswith("IF ") and " GOTO " in stmt_upper:
+            goto_pos = stmt_upper.find(" GOTO ")
+            if_part = statement[:goto_pos + 6]  # Include " GOTO "
+            goto_part = statement[goto_pos + 6:].strip()
+            
+            try:
+                old_line = int(goto_part)
+                if old_line in line_mapping:
+                    return f"{if_part}{line_mapping[old_line]}"
+            except ValueError:
+                pass
+        
+        # Handle IF...THEN GOTO statements
+        elif stmt_upper.startswith("IF ") and " THEN " in stmt_upper:
+            then_pos = stmt_upper.find(" THEN ")
+            if_part = statement[:then_pos + 6]  # Include " THEN "
+            then_part = statement[then_pos + 6:].strip()
+            
+            if then_part.upper().startswith("GOTO "):
+                goto_parts = then_part.split(None, 1)
+                if len(goto_parts) == 2:
+                    try:
+                        old_line = int(goto_parts[1])
+                        if old_line in line_mapping:
+                            return f"{if_part}GOTO {line_mapping[old_line]}"
+                    except ValueError:
+                        pass
+        
+        return statement
+
     def calculate_indentation(self, statement: str) -> int:
         stmt_upper = statement.upper()
         if stmt_upper.startswith("FOR"):
@@ -403,16 +473,29 @@ class PyBASFormatter:
                 # Store in program dict with original line number and indentation
                 formatted_program[original_line_num] = f"{indent}{formatted_statement}"
         else:
-            # Use new sequential line numbers
+            # Use new sequential line numbers and update references
             new_line_num = self.line_increment
+            line_mapping = {}  # Map old line numbers to new ones
             
+            # First, create the mapping
+            for original_line_num, statement in statements:
+                line_mapping[original_line_num] = new_line_num
+                new_line_num += self.line_increment
+            
+            # Reset for second pass
+            new_line_num = self.line_increment
+            self.nest_level = 0
+            self.for_stack = []
+            
+            # Second pass: format with updated references
             for original_line_num, statement in statements:
                 # Calculate indentation
                 indent_level = self.calculate_indentation(statement)
                 indent = " " * (indent_level * self.indent_size)
                 
-                # Format the statement
-                formatted_statement = self.format_statement(statement)
+                # Update line references first, then format
+                updated_statement = self.update_line_references(statement, line_mapping)
+                formatted_statement = self.format_statement(updated_statement)
                 
                 # Store in new program dict with indentation
                 formatted_program[new_line_num] = f"{indent}{formatted_statement}"
@@ -638,7 +721,7 @@ class PyBASREPL:
             print(f"AUTO mode ON - starting at {self.auto_current}, increment {self.auto_increment}")
     
     def cmd_renum(self, args: List[str]):
-        """RENUM command - renumber program lines"""
+        """RENUM command - renumber program lines and update references"""
         if not self.program_lines:
             print("No program to renumber")
             return
@@ -651,17 +734,33 @@ class PyBASREPL:
         if len(args) >= 2:
             increment = int(args[1])
         
-        # Get sorted lines and renumber
+        # Get sorted lines and create line mapping
         sorted_lines = sorted(self.program_lines.keys())
+        line_mapping = {}  # Map old line numbers to new ones
+        new_line_num = start
+        
+        # Create mapping from old to new line numbers
+        for old_line_num in sorted_lines:
+            line_mapping[old_line_num] = new_line_num
+            new_line_num += increment
+        
+        # Create new program with updated line numbers and references
         new_program = {}
         new_line_num = start
         
+        # Create a temporary formatter to use the update_line_references method
+        formatter = PyBASFormatter()
+        
         for old_line_num in sorted_lines:
-            new_program[new_line_num] = self.program_lines[old_line_num]
+            statement = self.program_lines[old_line_num]
+            # Update any GOTO/GOSUB references in the statement
+            updated_statement = formatter.update_line_references(statement, line_mapping)
+            new_program[new_line_num] = updated_statement
             new_line_num += increment
         
         self.program_lines = new_program
         print(f"Program renumbered starting from {start}, increment {increment}")
+        print("All GOTO and GOSUB references have been updated")
     
     def cmd_format(self, args: List[str]):
         """FORMAT command - format the current program"""

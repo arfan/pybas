@@ -12,6 +12,7 @@ class BasicInterpreter:
         self.gosub_stack = []  # Stack for GOSUB/RETURN subroutines
         self.functions = {}  # Store DEF...ENDDEF function definitions
         self.function_call_stack = []  # Stack for function calls with local variables
+        self.imported_modules = {}  # Store imported Python modules
 
         # Load program into a dict {line_number: statement}
         for line in program_lines:
@@ -215,7 +216,20 @@ class BasicInterpreter:
         try:
             # Pre-process function calls in expressions
             processed_expr = self.preprocess_function_calls(expression)
-            return eval(processed_expr, {}, self.vars)
+            
+            # Create globals dict with imported modules and common functions
+            eval_globals = {
+                '__builtins__': {
+                    'abs': abs, 'round': round, 'int': int, 'float': float, 'str': str,
+                    'len': len, 'min': max, 'max': max, 'sum': sum, 'sorted': sorted,
+                    'list': list, 'dict': dict, 'tuple': tuple, 'set': set,
+                    'range': range, 'enumerate': enumerate, 'zip': zip,
+                    'print': print  # Allow direct print calls in expressions
+                }
+            }
+            eval_globals.update(self.imported_modules)
+            
+            return eval(processed_expr, eval_globals, self.vars)
         except ZeroDivisionError:
             error_msg = f"Error on line {line_num}: Division by zero"
             print(error_msg)
@@ -519,6 +533,9 @@ class BasicInterpreter:
             print(f"Warning: DEF statement found during execution on line {self.pc}")
             pass
 
+        elif stmt_upper.startswith("IMPORT "):
+            self.handle_import(stmt[7:])
+
         elif stmt_upper.startswith("ENDDEF"):
             # End of function definition - should have been removed during parsing, skip
             print(f"Warning: ENDDEF statement found during execution on line {self.pc}")
@@ -528,6 +545,50 @@ class BasicInterpreter:
             print(f"Unknown statement: {stmt}")
             
         return None
+
+    def handle_import(self, import_stmt):
+        """Handle IMPORT statements to import Python modules"""
+        import_stmt = import_stmt.strip()
+        
+        try:
+            if " AS " in import_stmt.upper():
+                # Handle "IMPORT module AS alias"
+                parts = import_stmt.split()
+                as_index = [i for i, part in enumerate(parts) if part.upper() == "AS"][0]
+                module_name = " ".join(parts[:as_index])
+                alias = parts[as_index + 1]
+                
+                module = __import__(module_name)
+                # Handle nested imports like "import os.path"
+                for part in module_name.split('.')[1:]:
+                    module = getattr(module, part)
+                
+                self.imported_modules[alias] = module
+                print(f"Imported {module_name} as {alias}")
+                
+            elif "," in import_stmt:
+                # Handle "IMPORT module1, module2, module3"
+                modules = [m.strip() for m in import_stmt.split(',')]
+                for module_name in modules:
+                    module = __import__(module_name)
+                    self.imported_modules[module_name] = module
+                    print(f"Imported {module_name}")
+                    
+            else:
+                # Handle simple "IMPORT module"
+                module_name = import_stmt
+                module = __import__(module_name)
+                # Handle nested imports like "import os.path"
+                for part in module_name.split('.')[1:]:
+                    module = getattr(module, part)
+                
+                self.imported_modules[module_name.split('.')[-1]] = module
+                print(f"Imported {module_name}")
+                
+        except ImportError as e:
+            print(f"Error on line {self.pc}: Could not import {import_stmt} - {e}")
+        except Exception as e:
+            print(f"Error on line {self.pc}: Import error - {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
