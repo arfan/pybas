@@ -1,0 +1,50 @@
+10 REM Import Demo - Using functions from multiple PyBas files
+20 PRINT "=== PyBas Import Demo ==="
+30 PRINT "Importing math utilities..."
+40 IMPORT math_utils.pybas
+50 PRINT "Importing string utilities..."
+60 IMPORT string_utils.pybas
+70 PRINT ""
+
+80 PRINT "Testing math functions:"
+90 PRINT "Square of 5:"
+100 RESULT = SQUARE(5)
+110 PRINT RESULT
+
+120 PRINT "Cube of 3:"
+130 RESULT = CUBE(3)
+140 PRINT RESULT
+
+150 PRINT "2 to the power of 4:"
+160 RESULT = POWER(2, 4)
+170 PRINT RESULT
+
+180 PRINT "Factorial of 5:"
+190 RESULT = FACTORIAL(5)
+200 PRINT RESULT
+
+210 PRINT "Max of 10 and 7:"
+220 RESULT = MAX(10, 7)
+230 PRINT RESULT
+
+240 PRINT "Min of 10 and 7:"
+250 RESULT = MIN(10, 7)
+260 PRINT RESULT
+
+270 PRINT ""
+280 PRINT "Testing string functions:"
+290 PRINT "Greeting for Alice:"
+300 RESULT = GREETING("Alice")
+310 PRINT RESULT
+
+320 PRINT "Repeat 'Hi! ' 3 times:"
+330 RESULT = REPEAT_STRING("Hi! ", 3)
+340 PRINT RESULT
+
+350 PRINT "Make title for 'PyBas Demo':"
+360 RESULT = MAKE_TITLE("PyBas Demo")
+370 PRINT RESULT
+
+380 PRINT ""
+390 PRINT "Demo complete!"
+400 END

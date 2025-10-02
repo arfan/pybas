@@ -1,0 +1,22 @@
+10 REM String utility functions
+20 REM This file contains reusable string functions
+
+30 DEF REPEAT_STRING(TEXT, COUNT)
+40   LET RESULT = ""
+50   LET I = 1
+60   IF I > COUNT GOTO 100
+70   LET RESULT = RESULT + TEXT
+80   LET I = I + 1
+90   GOTO 60
+100   RETURN RESULT
+110 ENDDEF
+
+120 DEF GREETING(NAME)
+130   LET MESSAGE = "Hello, " + NAME + "! Welcome to PyBas!"
+140   RETURN MESSAGE
+150 ENDDEF
+
+160 DEF MAKE_TITLE(TEXT)
+170   LET TITLE = "=== " + TEXT + " ==="
+180   RETURN TITLE
+190 ENDDEF

@@ -1,0 +1,5 @@
+10 REM Simple string function for testing
+20 DEF MAKE_TITLE(TEXT)
+30   LET TITLE = "=== " + TEXT + " ==="
+40   RETURN TITLE
+50 ENDDEF

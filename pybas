@@ -13,6 +13,7 @@ class BasicInterpreter:
         self.functions = {}  # Store DEF...ENDDEF function definitions
         self.function_call_stack = []  # Stack for function calls with local variables
         self.imported_modules = {}  # Store imported Python modules
+        self.imported_pybas_files = set()  # Track imported PyBas files to prevent circular imports
 
         # Load program into a dict {line_number: statement}
         for line in program_lines:
@@ -108,9 +109,12 @@ class BasicInterpreter:
             # Check if it's a variable assignment with function call
             if '=' in func_name_part:
                 # Example: RESULT = CALCULATE(5, 3)
-                var_name, func_call = func_name_part.split('=', 1)
-                var_name = var_name.strip()
-                func_name = func_call.strip()
+                # Split only on the first = to handle cases where there might be = in the function name
+                parts = func_name_part.split('=', 1)
+                if len(parts) != 2:
+                    return False
+                var_name = parts[0].strip()
+                func_name = parts[1].strip()
             else:
                 # Direct function call: CALCULATE(5, 3)
                 var_name = None
@@ -547,9 +551,15 @@ class BasicInterpreter:
         return None
 
     def handle_import(self, import_stmt):
-        """Handle IMPORT statements to import Python modules"""
+        """Handle IMPORT statements to import Python modules or PyBas files"""
         import_stmt = import_stmt.strip()
         
+        # Check if importing a PyBas file
+        if import_stmt.endswith('.pybas') or any(import_stmt.endswith(ext) for ext in ['.pybas', '.PYBAS']):
+            self.import_pybas_file(import_stmt)
+            return
+        
+        # Handle Python module imports (existing functionality)
         try:
             if " AS " in import_stmt.upper():
                 # Handle "IMPORT module AS alias"
@@ -589,6 +599,76 @@ class BasicInterpreter:
             print(f"Error on line {self.pc}: Could not import {import_stmt} - {e}")
         except Exception as e:
             print(f"Error on line {self.pc}: Import error - {e}")
+
+    def import_pybas_file(self, filename):
+        """Import functions from a PyBas file"""
+        import os
+        
+        # Handle relative paths
+        if not os.path.isabs(filename):
+            # Look for file relative to current program's directory
+            current_dir = os.path.dirname(sys.argv[1]) if len(sys.argv) > 1 else '.'
+            filename = os.path.join(current_dir, filename)
+        
+        # Normalize path to prevent circular imports
+        filename = os.path.abspath(filename)
+        
+        if filename in self.imported_pybas_files:
+            print(f"Warning: {filename} already imported, skipping")
+            return
+        
+        try:
+            if not os.path.exists(filename):
+                print(f"Error on line {self.pc}: PyBas file '{filename}' not found")
+                return
+            
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+            
+            # Create a temporary interpreter to parse the imported file
+            temp_interpreter = BasicInterpreter.__new__(BasicInterpreter)
+            temp_interpreter.program = {}
+            temp_interpreter.vars = {}
+            temp_interpreter.pc = None
+            temp_interpreter.stack = []
+            temp_interpreter.for_stack = []
+            temp_interpreter.gosub_stack = []
+            temp_interpreter.functions = {}
+            temp_interpreter.function_call_stack = []
+            temp_interpreter.imported_modules = {}
+            temp_interpreter.imported_pybas_files = set()
+            
+            # Load program into the temporary interpreter
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith("'"):  # allow comments
+                    continue
+                try:
+                    num, stmt = line.split(" ", 1)
+                    temp_interpreter.program[int(num)] = stmt.strip()
+                except ValueError:
+                    # Skip lines that don't follow line number format
+                    continue
+            
+            # Parse functions from the imported file
+            temp_interpreter.parse_functions()
+            
+            # Import all functions into current interpreter
+            functions_imported = 0
+            for func_name, func_def in temp_interpreter.functions.items():
+                if func_name not in self.functions:
+                    self.functions[func_name] = func_def
+                    functions_imported += 1
+                else:
+                    print(f"Warning: Function {func_name} already exists, skipping")
+            
+            # Mark file as imported
+            self.imported_pybas_files.add(filename)
+            
+            print(f"Imported {functions_imported} function(s) from {os.path.basename(filename)}")
+            
+        except Exception as e:
+            print(f"Error on line {self.pc}: Could not import PyBas file '{filename}' - {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -1,0 +1,5 @@
+10 REM Simple math function for testing
+20 DEF SQUARE(X)
+30   LET RESULT = X * X
+40   RETURN RESULT
+50 ENDDEF
